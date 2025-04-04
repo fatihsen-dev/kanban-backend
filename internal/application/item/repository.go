@@ -3,7 +3,7 @@ package item
 import (
 	"context"
 
-	"github.com/fatihsen-dev/kanban-backend/domain"
+	"github.com/fatihsen-dev/kanban-backend/internal/domain"
 )
 
 type Repository interface {

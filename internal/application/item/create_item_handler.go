@@ -3,7 +3,7 @@ package item
 import (
 	"fmt"
 
-	"github.com/fatihsen-dev/kanban-backend/domain"
+	"github.com/fatihsen-dev/kanban-backend/internal/domain"
 	"github.com/gofiber/fiber/v2"
 )
 

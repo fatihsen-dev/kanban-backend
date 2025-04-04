@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fatihsen-dev/kanban-backend/app/item"
 	"github.com/fatihsen-dev/kanban-backend/config"
-	"github.com/fatihsen-dev/kanban-backend/infra/postgres"
+	"github.com/fatihsen-dev/kanban-backend/internal/application/item"
+	"github.com/fatihsen-dev/kanban-backend/internal/infra/postgres"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 )
 
 func main() {
@@ -20,6 +21,10 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	app.Use("/ws/projects/:id", websocket.New(func(c *websocket.Conn) {
+		fmt.Println("Connected to websocket")
+	}))
 
 	createItemHandler := item.NewCreateItemHandler(pg)
 

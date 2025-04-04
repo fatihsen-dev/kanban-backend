@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fatihsen-dev/kanban-backend/domain"
+	"github.com/fatihsen-dev/kanban-backend/internal/domain"
 	"github.com/jackc/pgx/v5"
 )
 
