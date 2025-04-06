@@ -4,7 +4,7 @@ import "time"
 
 type Column struct {
 	ID        string
-	Title     string
+	Name      string
 	ProjectID string
 	CreatedAt time.Time
 }

@@ -1,16 +1,22 @@
 package ws
 
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+)
+
 type BroadcastMessage struct {
-	GroupID string
-	Data    []byte
+	ProjectID string
+	Data      []byte
 }
 
 type Hub struct {
 	clients    map[*Client]bool
-	groups     map[string][]*Client
 	broadcast  chan BroadcastMessage
 	register   chan *Client
 	unregister chan *Client
+	ctx        context.Context
 }
 
 func NewHub() *Hub {
@@ -19,7 +25,7 @@ func NewHub() *Hub {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
-		groups:     make(map[string][]*Client),
+		ctx:        context.Background(),
 	}
 }
 
@@ -32,34 +38,10 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
-
-				for groupID, clients := range h.groups {
-					for i, c := range clients {
-						if c == client {
-							h.groups[groupID] = append(clients[:i], clients[i+1:]...)
-							if len(h.groups[groupID]) == 0 {
-								delete(h.groups, groupID)
-							}
-							break
-						}
-					}
-				}
 			}
 		case message := <-h.broadcast:
-			if message.GroupID != "" {
-				if clients, ok := h.groups[message.GroupID]; ok {
-					for _, client := range clients {
-						select {
-						case client.send <- message.Data:
-						default:
-							close(client.send)
-							delete(h.clients, client)
-							h.RemoveFromGroup(message.GroupID, client)
-						}
-					}
-				}
-			} else {
-				for client := range h.clients {
+			for client := range h.clients {
+				if client.projectID == message.ProjectID {
 					select {
 					case client.send <- message.Data:
 					default:
@@ -72,27 +54,15 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) AddToGroup(groupID string, client *Client) {
-	h.groups[groupID] = append(h.groups[groupID], client)
-}
-
-func (h *Hub) RemoveFromGroup(groupID string, client *Client) {
-	if clients, ok := h.groups[groupID]; ok {
-		for i, c := range clients {
-			if c == client {
-				h.groups[groupID] = append(clients[:i], clients[i+1:]...)
-				if len(h.groups[groupID]) == 0 {
-					delete(h.groups, groupID)
-				}
-				break
-			}
-		}
+func (h *Hub) SendMessage(projectID string, data BaseResponse) {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-}
 
-func (h *Hub) Broadcast(groupID string, data []byte) {
 	h.broadcast <- BroadcastMessage{
-		GroupID: groupID,
-		Data:    data,
+		ProjectID: projectID,
+		Data:      jsonData,
 	}
 }

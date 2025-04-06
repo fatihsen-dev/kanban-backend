@@ -1,9 +1,11 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 type Project struct {
 	ID        string
-	Title     string
+	Name      string
 	CreatedAt time.Time
 }

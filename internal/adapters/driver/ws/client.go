@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,16 +15,18 @@ const (
 )
 
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
+	hub       *Hub
+	conn      *websocket.Conn
+	send      chan []byte
+	projectID string
 }
 
-func NewClient(hub *Hub, conn *websocket.Conn) *Client {
+func NewClient(hub *Hub, conn *websocket.Conn, projectID string) *Client {
 	return &Client{
-		hub:  hub,
-		conn: conn,
-		send: make(chan []byte, 256),
+		hub:       hub,
+		conn:      conn,
+		send:      make(chan []byte, 256),
+		projectID: projectID,
 	}
 }
 
@@ -32,18 +35,21 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
+
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
 		c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			break
 		}
-		HandleMessage(c.hub, c, message)
+
+		fmt.Printf("Message: %s\nProject: %s\n", string(message), c.projectID)
 	}
 }
 

@@ -7,8 +7,8 @@ import (
 )
 
 type AppConfig struct {
-	Port        string `mapstructure:"port" yaml:"port"`
-	DatabaseUrl string `mapstructure:"database_url" yaml:"database_url"`
+	Port  string `mapstructure:"port" yaml:"port"`
+	DBUrl string `mapstructure:"db_url" yaml:"db_url"`
 }
 
 func Read() *AppConfig {

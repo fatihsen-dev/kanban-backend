@@ -11,11 +11,16 @@ var upgrader = websocket.Upgrader{
 }
 
 func ServeWs(hub *Hub, c *gin.Context) {
+	groupID := c.Param("project_id")
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		conn.Close()
 		return
 	}
-	client := NewClient(hub, conn)
+
+	client := NewClient(hub, conn, groupID)
+
 	hub.register <- client
 
 	go client.writePump()
