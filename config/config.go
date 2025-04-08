@@ -7,8 +7,9 @@ import (
 )
 
 type AppConfig struct {
-	Port  string `mapstructure:"port" yaml:"port"`
-	DBUrl string `mapstructure:"db_url" yaml:"db_url"`
+	Port      string `mapstructure:"port" yaml:"port"`
+	DBUrl     string `mapstructure:"db_url" yaml:"db_url"`
+	JWTSecret string `mapstructure:"jwt_secret" yaml:"jwt_secret"`
 }
 
 func Read() *AppConfig {

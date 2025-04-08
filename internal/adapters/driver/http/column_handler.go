@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
@@ -11,18 +12,19 @@ import (
 )
 
 type columnHandler struct {
-	columnService ports.ColumnService
-	hub           *ws.Hub
+	columnService  ports.ColumnService
+	authMiddleware *middlewares.AuthMiddleware
+	hub            *ws.Hub
 }
 
-func NewColumnHandler(columnService ports.ColumnService, hub *ws.Hub) *columnHandler {
-	return &columnHandler{columnService: columnService, hub: hub}
+func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *columnHandler {
+	return &columnHandler{columnService: columnService, authMiddleware: authMiddleware, hub: hub}
 }
 
 func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
-	r.POST("/columns", h.CreateColumnHandler)
-	r.GET("/columns", h.GetColumnsHandler)
-	r.GET("/columns/:id", h.GetColumnHandler)
+	r.POST("/columns", h.authMiddleware.Handle, h.CreateColumnHandler)
+	r.GET("/columns", h.authMiddleware.Handle, h.GetColumnsHandler)
+	r.GET("/columns/:id", h.authMiddleware.Handle, h.GetColumnHandler)
 }
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {

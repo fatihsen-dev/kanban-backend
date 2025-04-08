@@ -6,12 +6,26 @@ import (
 )
 
 func Migrate(db *sql.DB) {
-	query := `CREATE TABLE IF NOT EXISTS projects (
+
+	query := `CREATE TABLE IF NOT EXISTS users (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		name VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL,
+		password_hash VARCHAR(255) NOT NULL,
+		is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`
+	_, err := db.Exec(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query = `CREATE TABLE IF NOT EXISTS projects (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		name VARCHAR(255) NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`
-	_, err := db.Exec(query)
+	_, err = db.Exec(query)
 	if err != nil {
 		log.Fatal(err)
 	}

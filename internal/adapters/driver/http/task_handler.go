@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
@@ -11,18 +12,19 @@ import (
 )
 
 type taskHandler struct {
-	taskService ports.TaskService
-	hub         *ws.Hub
+	taskService    ports.TaskService
+	authMiddleware *middlewares.AuthMiddleware
+	hub            *ws.Hub
 }
 
-func NewTaskHandler(taskService ports.TaskService, hub *ws.Hub) *taskHandler {
-	return &taskHandler{taskService: taskService, hub: hub}
+func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *taskHandler {
+	return &taskHandler{taskService: taskService, authMiddleware: authMiddleware, hub: hub}
 }
 
 func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
-	r.POST("/tasks", h.CreateTaskHandler)
-	r.GET("/tasks", h.GetTasksHandler)
-	r.GET("/tasks/:id", h.GetTaskHandler)
+	r.POST("/tasks", h.authMiddleware.Handle, h.CreateTaskHandler)
+	r.GET("/tasks", h.authMiddleware.Handle, h.GetTasksHandler)
+	r.GET("/tasks/:id", h.authMiddleware.Handle, h.GetTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {

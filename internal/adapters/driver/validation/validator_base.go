@@ -22,9 +22,9 @@ func (ve ValidationErrors) Error() string {
 	return strings.Join(messages, ", ")
 }
 
-func Validate(message interface{}) error {
+func Validate(data interface{}) error {
 	validate := validator.New()
-	err := validate.Struct(message)
+	err := validate.Struct(data)
 	if err != nil {
 		var validationErrors ValidationErrors
 

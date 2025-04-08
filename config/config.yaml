@@ -1,2 +1,3 @@
 port: 5000
-db_url: "postgres://postgres:postgres@localhost:5432/todo?sslmode=disable"
+db_url: "postgres://postgres:postgres@localhost:5432/kanban?sslmode=disable"
+jwt_secret: "roFQaRHN2g/o2qHE8G4cAKa36aU6Yd61UqUsK69NHsD4dQaJqK49jr7j3mpOXkfpvQo="
