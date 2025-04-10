@@ -16,6 +16,7 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/service"
 	_ "github.com/fatihsen-dev/kanban-backend/pkg/log"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -25,6 +26,11 @@ func main() {
 	defer zap.L().Sync()
 
 	router := gin.Default()
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{appConfig.ClientUrl},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+	}))
 	router.SetTrustedProxies(nil)
 
 	postgresDB := db.NewPostgresRepository(appConfig.DBUrl)

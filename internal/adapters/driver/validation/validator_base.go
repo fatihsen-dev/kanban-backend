@@ -66,6 +66,8 @@ func getErrorMessage(err validator.FieldError) string {
 		return "Must contain only letters and numbers"
 	case "json":
 		return "Must be a valid JSON"
+	case "containsany":
+		return "is invalid"
 	default:
 		return fmt.Sprintf("Failed %s validation", err.Tag())
 	}
