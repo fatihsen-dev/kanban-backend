@@ -61,7 +61,7 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 }
 
 func (h *columnHandler) GetColumnHandler(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 
 	column, err := h.columnService.GetColumnByID(c.Request.Context(), id)
 	if err != nil {

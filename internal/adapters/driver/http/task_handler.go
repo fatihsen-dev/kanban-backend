@@ -30,7 +30,9 @@ func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 	var requestData struct {
-		Title string `json:"title"`
+		Title     string `json:"title"`
+		ProjectID string `json:"project_id"`
+		ColumnID  string `json:"column_id"`
 	}
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
@@ -39,7 +41,9 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 	}
 
 	task := &domain.Task{
-		Title: requestData.Title,
+		Title:     requestData.Title,
+		ProjectID: requestData.ProjectID,
+		ColumnID:  requestData.ColumnID,
 	}
 
 	err := h.taskService.CreateTask(c.Request.Context(), task)
@@ -59,7 +63,7 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 }
 
 func (h *taskHandler) GetTaskHandler(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 
 	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
 	if err != nil {

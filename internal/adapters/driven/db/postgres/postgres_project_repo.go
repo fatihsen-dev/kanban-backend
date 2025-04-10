@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
+	"go.uber.org/zap"
 )
 
 type PostgresProjectRepository struct {
@@ -26,10 +27,11 @@ func (r *PostgresProjectRepository) Save(ctx context.Context, project *domain.Pr
 }
 
 func (r *PostgresProjectRepository) GetByID(ctx context.Context, id string) (*domain.Project, error) {
-	query := `SELECT id, name FROM projects WHERE id = $1`
+	query := `SELECT id, name, created_at FROM projects WHERE id = $1`
 	var project domain.Project
-	err := r.DB.QueryRowContext(ctx, query, id).Scan(&project.ID, &project.Name)
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(&project.ID, &project.Name, &project.CreatedAt)
 	if err != nil {
+		zap.L().Error("Failed to get project by id", zap.Error(err))
 		return nil, err
 	}
 	return &project, nil

@@ -54,7 +54,7 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 }
 
 func (h *projectHandler) GetProjectHandler(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 
 	project, err := h.projectService.GetProjectByID(c.Request.Context(), id)
 	if err != nil {
