@@ -3,7 +3,11 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
@@ -29,12 +33,10 @@ func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 
-	var requestData struct {
-		Name string `json:"name"`
-	}
+	var requestData requests.ProjectCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
 	}
 
@@ -46,11 +48,17 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create project"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create project"))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Project created successfully"})
+	responseData := responses.ProjectResponse{
+		ID:        project.ID,
+		Name:      project.Name,
+		CreatedAt: project.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Project created successfully", responseData))
 }
 
 func (h *projectHandler) GetProjectHandler(c *gin.Context) {
@@ -58,18 +66,34 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 
 	project, err := h.projectService.GetProjectByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get project"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get project"))
 		return
 	}
 
-	c.JSON(http.StatusOK, project)
+	responseData := responses.ProjectResponse{
+		ID:        project.ID,
+		Name:      project.Name,
+		CreatedAt: project.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project fetched successfully", responseData))
 }
 
 func (h *projectHandler) GetProjectsHandler(c *gin.Context) {
 	projects, err := h.projectService.GetProjects(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get projects"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get projects"))
 		return
 	}
-	c.JSON(http.StatusOK, projects)
+
+	projectResponses := make([]responses.ProjectResponse, len(projects))
+	for i, project := range projects {
+		projectResponses[i] = responses.ProjectResponse{
+			ID:        project.ID,
+			Name:      project.Name,
+			CreatedAt: project.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Projects fetched successfully", projectResponses))
 }

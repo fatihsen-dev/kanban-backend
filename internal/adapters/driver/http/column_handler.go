@@ -3,7 +3,11 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
@@ -29,13 +33,10 @@ func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 
-	var requestData struct {
-		Name      string `json:"name"`
-		ProjectID string `json:"project_id"`
-	}
+	var requestData requests.ColumnCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
 	}
 
@@ -48,7 +49,7 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create column"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create column"))
 		return
 	}
 
@@ -57,7 +58,14 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 		Data: column,
 	})
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Column created successfully"})
+	responseData := responses.ColumnResponse{
+		ID:        column.ID,
+		Name:      column.Name,
+		ProjectID: column.ProjectID,
+		CreatedAt: column.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Column created successfully", responseData))
 }
 
 func (h *columnHandler) GetColumnHandler(c *gin.Context) {
@@ -65,19 +73,36 @@ func (h *columnHandler) GetColumnHandler(c *gin.Context) {
 
 	column, err := h.columnService.GetColumnByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get column"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get column"))
 		return
 	}
 
-	c.JSON(http.StatusOK, column)
+	responseData := responses.ColumnResponse{
+		ID:        column.ID,
+		Name:      column.Name,
+		ProjectID: column.ProjectID,
+		CreatedAt: column.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column fetched successfully", responseData))
 }
 
 func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
 	columns, err := h.columnService.GetColumns(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get columns"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get columns"))
 		return
 	}
 
-	c.JSON(http.StatusOK, columns)
+	responseData := make([]responses.ColumnResponse, len(columns))
+	for i, column := range columns {
+		responseData[i] = responses.ColumnResponse{
+			ID:        column.ID,
+			Name:      column.Name,
+			ProjectID: column.ProjectID,
+			CreatedAt: column.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Columns fetched successfully", responseData))
 }

@@ -3,7 +3,11 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
@@ -29,14 +33,10 @@ func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
-	var requestData struct {
-		Title     string `json:"title"`
-		ProjectID string `json:"project_id"`
-		ColumnID  string `json:"column_id"`
-	}
+	var requestData requests.TaskCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
 	}
 
@@ -50,7 +50,7 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create task"))
 		return
 	}
 
@@ -59,7 +59,15 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 		Data: task,
 	})
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Project created successfully"})
+	responseData := responses.TaskResponse{
+		ID:        task.ID,
+		Title:     task.Title,
+		ProjectID: task.ProjectID,
+		ColumnID:  task.ColumnID,
+		CreatedAt: task.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Task created successfully", responseData))
 }
 
 func (h *taskHandler) GetTaskHandler(c *gin.Context) {
@@ -67,19 +75,38 @@ func (h *taskHandler) GetTaskHandler(c *gin.Context) {
 
 	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get task"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get task"))
 		return
 	}
 
-	c.JSON(http.StatusOK, task)
+	responseData := responses.TaskResponse{
+		ID:        task.ID,
+		Title:     task.Title,
+		ProjectID: task.ProjectID,
+		ColumnID:  task.ColumnID,
+		CreatedAt: task.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task fetched successfully", responseData))
 }
 
 func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 	tasks, err := h.taskService.GetTasks(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tasks"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get tasks"))
 		return
 	}
 
-	c.JSON(http.StatusOK, tasks)
+	responseData := make([]responses.TaskResponse, len(tasks))
+	for i, task := range tasks {
+		responseData[i] = responses.TaskResponse{
+			ID:        task.ID,
+			Title:     task.Title,
+			ProjectID: task.ProjectID,
+			ColumnID:  task.ColumnID,
+			CreatedAt: task.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Tasks fetched successfully", responseData))
 }
