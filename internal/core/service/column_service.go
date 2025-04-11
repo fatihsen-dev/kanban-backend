@@ -9,10 +9,11 @@ import (
 
 type ColumnService struct {
 	columnRepo ports.ColumnRepository
+	taskRepo   ports.TaskRepository
 }
 
-func NewColumnService(columnRepo ports.ColumnRepository) *ColumnService {
-	return &ColumnService{columnRepo: columnRepo}
+func NewColumnService(columnRepo ports.ColumnRepository, taskRepo ports.TaskRepository) *ColumnService {
+	return &ColumnService{columnRepo: columnRepo, taskRepo: taskRepo}
 }
 
 func (s *ColumnService) CreateColumn(ctx context.Context, column *domain.Column) error {
@@ -29,4 +30,18 @@ func (s *ColumnService) GetColumnByID(ctx context.Context, id string) (*domain.C
 
 func (s *ColumnService) GetColumns(ctx context.Context) ([]*domain.Column, error) {
 	return s.columnRepo.GetAll(ctx)
+}
+
+func (s *ColumnService) GetColumnWithTasks(ctx context.Context, columnID string) (*domain.Column, []*domain.Task, error) {
+	column, err := s.columnRepo.GetByID(ctx, columnID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tasks, err := s.taskRepo.GetTasksByColumnIDs(ctx, []string{columnID})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return column, tasks, nil
 }

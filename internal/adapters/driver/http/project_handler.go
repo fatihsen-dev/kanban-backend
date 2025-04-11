@@ -29,6 +29,7 @@ func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 	r.POST("/projects", h.authMiddleware.Handle, h.CreateProjectHandler)
 	r.GET("/projects", h.authMiddleware.Handle, h.GetProjectsHandler)
 	r.GET("/projects/:id", h.authMiddleware.Handle, h.GetProjectHandler)
+	r.GET("/projects/:id/columns", h.authMiddleware.Handle, h.GetProjectWithColumnsHandler)
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
@@ -77,6 +78,47 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project fetched successfully", responseData))
+}
+
+func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
+	projectID := c.Param("id")
+
+	project, columns, tasksByColumn, err := h.projectService.GetProjectWithColumns(c.Request.Context(), projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get project details"))
+		return
+	}
+
+	columnResponses := make([]responses.ColumnWithTasksResponse, len(columns))
+	for i, column := range columns {
+		tasks := tasksByColumn[column.ID]
+		taskResponses := make([]responses.TaskResponse, len(tasks))
+		for j, task := range tasks {
+			taskResponses[j] = responses.TaskResponse{
+				ID:        task.ID,
+				Title:     task.Title,
+				ProjectID: task.ProjectID,
+				ColumnID:  task.ColumnID,
+				CreatedAt: task.CreatedAt.Format(time.RFC3339),
+			}
+		}
+
+		columnResponses[i] = responses.ColumnWithTasksResponse{
+			ID:        column.ID,
+			Name:      column.Name,
+			CreatedAt: column.CreatedAt.Format(time.RFC3339),
+			Tasks:     taskResponses,
+		}
+	}
+
+	response := responses.ProjectWithDetailsResponse{
+		ID:        project.ID,
+		Name:      project.Name,
+		CreatedAt: project.CreatedAt.Format(time.RFC3339),
+		Columns:   columnResponses,
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project details fetched successfully", response))
 }
 
 func (h *projectHandler) GetProjectsHandler(c *gin.Context) {

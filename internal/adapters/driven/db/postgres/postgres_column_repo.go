@@ -34,6 +34,26 @@ func (r *PostgresColumnRepository) GetByID(ctx context.Context, id string) (*dom
 	return &column, nil
 }
 
+func (r *PostgresColumnRepository) GetColumnsByProjectID(ctx context.Context, projectID string) ([]*domain.Column, error) {
+	query := `SELECT id, name, project_id, created_at FROM columns WHERE project_id = $1`
+	rows, err := r.DB.QueryContext(ctx, query, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var columns []*domain.Column
+	for rows.Next() {
+		var column domain.Column
+		err := rows.Scan(&column.ID, &column.Name, &column.ProjectID, &column.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		columns = append(columns, &column)
+	}
+	return columns, nil
+}
+
 func (r *PostgresColumnRepository) GetAll(ctx context.Context) ([]*domain.Column, error) {
 	query := `SELECT id, name, project_id, created_at FROM columns`
 	rows, err := r.DB.QueryContext(ctx, query)

@@ -29,6 +29,7 @@ func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
 	r.POST("/columns", h.authMiddleware.Handle, h.CreateColumnHandler)
 	r.GET("/columns", h.authMiddleware.Handle, h.GetColumnsHandler)
 	r.GET("/columns/:id", h.authMiddleware.Handle, h.GetColumnHandler)
+	r.GET("/columns/:id/tasks", h.authMiddleware.Handle, h.GetColumnWithTasksHandler)
 }
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
@@ -85,6 +86,35 @@ func (h *columnHandler) GetColumnHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column fetched successfully", responseData))
+}
+
+func (h *columnHandler) GetColumnWithTasksHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	column, tasks, err := h.columnService.GetColumnWithTasks(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get column with tasks"))
+		return
+	}
+
+	responseData := responses.ColumnWithTasksResponse{
+		ID:        column.ID,
+		Name:      column.Name,
+		CreatedAt: column.CreatedAt.Format(time.RFC3339),
+		Tasks:     make([]responses.TaskResponse, len(tasks)),
+	}
+
+	for i, task := range tasks {
+		responseData.Tasks[i] = responses.TaskResponse{
+			ID:        task.ID,
+			Title:     task.Title,
+			ProjectID: task.ProjectID,
+			ColumnID:  task.ColumnID,
+			CreatedAt: task.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column with tasks fetched successfully", responseData))
 }
 
 func (h *columnHandler) GetColumnsHandler(c *gin.Context) {

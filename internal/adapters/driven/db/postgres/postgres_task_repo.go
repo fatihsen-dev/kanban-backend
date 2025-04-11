@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
+	"github.com/lib/pq"
 )
 
 type PostgresTaskRepository struct {
@@ -32,6 +33,26 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*domai
 		return nil, err
 	}
 	return &task, nil
+}
+
+func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, columnIDs []string) ([]*domain.Task, error) {
+	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1)`
+	rows, err := r.DB.QueryContext(ctx, query, pq.Array(columnIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*domain.Task
+	for rows.Next() {
+		var task domain.Task
+		err := rows.Scan(&task.ID, &task.Title, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &task)
+	}
+	return tasks, nil
 }
 
 func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, error) {

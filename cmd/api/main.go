@@ -54,20 +54,21 @@ func main() {
 	authHandler := httphandler.NewAuthHandler(userService, authMiddleware)
 	authHandler.RegisterAuthRouter(router)
 
-	// /projects/* routes
 	projectRepo := db.NewPostgresProjectRepo(postgresDB)
-	projectService := service.NewProjectService(projectRepo)
+	columnRepo := db.NewPostgresColumnRepo(postgresDB)
+	taskRepo := db.NewPostgresTaskRepo(postgresDB)
+
+	// /projects/* routes
+	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo)
 	projectHandler := httphandler.NewProjectHandler(projectService, authMiddleware, hub)
 	projectHandler.RegisterProjectRouter(router)
 
 	// /columns/* routes
-	columnRepo := db.NewPostgresColumnRepo(postgresDB)
-	columnService := service.NewColumnService(columnRepo)
+	columnService := service.NewColumnService(columnRepo, taskRepo)
 	columnHandler := httphandler.NewColumnHandler(columnService, authMiddleware, hub)
 	columnHandler.RegisterColumnRouter(router)
 
 	// /tasks/* routes
-	taskRepo := db.NewPostgresTaskRepo(postgresDB)
 	taskService := service.NewTaskService(taskRepo)
 	taskHandler := httphandler.NewTaskHandler(taskService, authMiddleware, hub)
 	taskHandler.RegisterTaskRouter(router)

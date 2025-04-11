@@ -10,4 +10,5 @@ type ColumnService interface {
 	CreateColumn(ctx context.Context, column *domain.Column) error
 	GetColumnByID(ctx context.Context, id string) (*domain.Column, error)
 	GetColumns(ctx context.Context) ([]*domain.Column, error)
+	GetColumnWithTasks(ctx context.Context, columnID string) (*domain.Column, []*domain.Task, error)
 }

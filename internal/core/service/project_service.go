@@ -9,10 +9,16 @@ import (
 
 type ProjectService struct {
 	projectRepo ports.ProjectRepository
+	columnRepo  ports.ColumnRepository
+	taskRepo    ports.TaskRepository
 }
 
-func NewProjectService(projectRepo ports.ProjectRepository) *ProjectService {
-	return &ProjectService{projectRepo: projectRepo}
+func NewProjectService(projectRepo ports.ProjectRepository, columnRepo ports.ColumnRepository, taskRepo ports.TaskRepository) *ProjectService {
+	return &ProjectService{
+		projectRepo: projectRepo,
+		columnRepo:  columnRepo,
+		taskRepo:    taskRepo,
+	}
 }
 
 func (s *ProjectService) CreateProject(ctx context.Context, project *domain.Project) error {
@@ -29,4 +35,33 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id string) (*domain
 
 func (s *ProjectService) GetProjects(ctx context.Context) ([]*domain.Project, error) {
 	return s.projectRepo.GetAll(ctx)
+}
+
+func (s *ProjectService) GetProjectWithColumns(ctx context.Context, projectID string) (*domain.Project, []*domain.Column, map[string][]*domain.Task, error) {
+	project, err := s.projectRepo.GetByID(ctx, projectID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	columns, err := s.columnRepo.GetColumnsByProjectID(ctx, projectID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	columnIDs := make([]string, len(columns))
+	for i, column := range columns {
+		columnIDs[i] = column.ID
+	}
+
+	tasks, err := s.taskRepo.GetTasksByColumnIDs(ctx, columnIDs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	tasksByColumn := make(map[string][]*domain.Task)
+	for _, task := range tasks {
+		tasksByColumn[task.ColumnID] = append(tasksByColumn[task.ColumnID], task)
+	}
+
+	return project, columns, tasksByColumn, nil
 }
