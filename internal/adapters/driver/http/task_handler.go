@@ -29,6 +29,8 @@ func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
 	r.POST("/tasks", h.authMiddleware.Handle, h.CreateTaskHandler)
 	r.GET("/tasks", h.authMiddleware.Handle, h.GetTasksHandler)
 	r.GET("/tasks/:id", h.authMiddleware.Handle, h.GetTaskHandler)
+	r.PUT("/tasks/:id", h.authMiddleware.Handle, h.UpdateTaskHandler)
+	r.DELETE("/tasks/:id", h.authMiddleware.Handle, h.DeleteTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
@@ -109,4 +111,47 @@ func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Tasks fetched successfully", responseData))
+}
+
+func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	var requestData requests.TaskUpdateRequest
+
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	task := &domain.Task{
+		ID: id,
+	}
+
+	if requestData.Title != "" {
+		task.Title = requestData.Title
+	}
+
+	if requestData.ColumnID != "" {
+		task.ColumnID = requestData.ColumnID
+	}
+
+	err := h.taskService.UpdateTask(c.Request.Context(), task)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to update task"))
+		return
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task updated successfully", nil))
+}
+
+func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	err := h.taskService.DeleteTask(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete task"))
+		return
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task deleted successfully", nil))
 }

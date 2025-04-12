@@ -74,3 +74,21 @@ func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, er
 	}
 	return tasks, nil
 }
+
+func (r *PostgresTaskRepository) Update(ctx context.Context, task *domain.Task) error {
+	query := `UPDATE tasks SET title = $1, column_id = $2 WHERE id = $3`
+	_, err := r.DB.ExecContext(ctx, query, task.Title, task.ColumnID, task.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM tasks WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
