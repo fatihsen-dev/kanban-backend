@@ -92,3 +92,12 @@ func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 	}
 	return nil
 }
+
+func (r *PostgresTaskRepository) DeleteTasksByColumnID(ctx context.Context, columnID string) error {
+	query := `DELETE FROM tasks WHERE column_id = $1`
+	_, err := r.DB.ExecContext(ctx, query, columnID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -73,3 +73,21 @@ func (r *PostgresColumnRepository) GetAll(ctx context.Context) ([]*domain.Column
 	}
 	return columns, nil
 }
+
+func (r *PostgresColumnRepository) Update(ctx context.Context, column *domain.Column) error {
+	query := `UPDATE columns SET name = $1 WHERE id = $2`
+	_, err := r.DB.ExecContext(ctx, query, column.Name, column.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresColumnRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM columns WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -45,3 +45,21 @@ func (s *ColumnService) GetColumnWithTasks(ctx context.Context, columnID string)
 
 	return column, tasks, nil
 }
+
+func (s *ColumnService) UpdateColumn(ctx context.Context, column *domain.Column) error {
+	return s.columnRepo.Update(ctx, column)
+}
+
+func (s *ColumnService) DeleteColumn(ctx context.Context, id string) error {
+	err := s.columnRepo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	err = s.taskRepo.DeleteTasksByColumnID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -11,4 +11,6 @@ type ColumnService interface {
 	GetColumnByID(ctx context.Context, id string) (*domain.Column, error)
 	GetColumns(ctx context.Context) ([]*domain.Column, error)
 	GetColumnWithTasks(ctx context.Context, columnID string) (*domain.Column, []*domain.Task, error)
+	UpdateColumn(ctx context.Context, column *domain.Column) error
+	DeleteColumn(ctx context.Context, id string) error
 }

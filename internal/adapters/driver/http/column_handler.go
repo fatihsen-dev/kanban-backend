@@ -30,6 +30,8 @@ func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
 	r.GET("/columns", h.authMiddleware.Handle, h.GetColumnsHandler)
 	r.GET("/columns/:id", h.authMiddleware.Handle, h.GetColumnHandler)
 	r.GET("/columns/:id/tasks", h.authMiddleware.Handle, h.GetColumnWithTasksHandler)
+	r.PUT("/columns/:id", h.authMiddleware.Handle, h.UpdateColumnHandler)
+	r.DELETE("/columns/:id", h.authMiddleware.Handle, h.DeleteColumnHandler)
 }
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
@@ -135,4 +137,40 @@ func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Columns fetched successfully", responseData))
+}
+
+func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	var requestData requests.ColumnUpdateRequest
+
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	column := &domain.Column{
+		ID:   id,
+		Name: requestData.Name,
+	}
+
+	err := h.columnService.UpdateColumn(c.Request.Context(), column)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to update column"))
+		return
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column updated successfully", nil))
+}
+
+func (h *columnHandler) DeleteColumnHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	err := h.columnService.DeleteColumn(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete column"))
+		return
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column deleted successfully", nil))
 }
