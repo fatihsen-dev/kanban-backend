@@ -9,6 +9,7 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
@@ -74,6 +75,12 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 func (h *columnHandler) GetColumnHandler(c *gin.Context) {
 	id := c.Param("id")
 
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
+		return
+	}
+
 	column, err := h.columnService.GetColumnByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get column"))
@@ -92,6 +99,12 @@ func (h *columnHandler) GetColumnHandler(c *gin.Context) {
 
 func (h *columnHandler) GetColumnWithTasksHandler(c *gin.Context) {
 	id := c.Param("id")
+
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
+		return
+	}
 
 	column, tasks, err := h.columnService.GetColumnWithTasks(c.Request.Context(), id)
 	if err != nil {
@@ -142,8 +155,13 @@ func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
 func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	id := c.Param("id")
 
-	var requestData requests.ColumnUpdateRequest
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
+		return
+	}
 
+	var requestData requests.ColumnUpdateRequest
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
@@ -154,7 +172,7 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 		Name: requestData.Name,
 	}
 
-	err := h.columnService.UpdateColumn(c.Request.Context(), column)
+	err = h.columnService.UpdateColumn(c.Request.Context(), column)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to update column"))
 		return
@@ -166,7 +184,13 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 func (h *columnHandler) DeleteColumnHandler(c *gin.Context) {
 	id := c.Param("id")
 
-	err := h.columnService.DeleteColumn(c.Request.Context(), id)
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
+		return
+	}
+
+	err = h.columnService.DeleteColumn(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete column"))
 		return

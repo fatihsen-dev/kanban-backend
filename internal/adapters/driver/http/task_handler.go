@@ -9,6 +9,7 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
@@ -34,7 +35,6 @@ func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
-
 	var requestData requests.TaskCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
@@ -74,6 +74,12 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 func (h *taskHandler) GetTaskHandler(c *gin.Context) {
 	id := c.Param("id")
+
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
 
 	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
 	if err != nil {
@@ -116,8 +122,13 @@ func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	id := c.Param("id")
 
-	var requestData requests.TaskUpdateRequest
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
 
+	var requestData requests.TaskUpdateRequest
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
@@ -135,7 +146,7 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 		task.ColumnID = requestData.ColumnID
 	}
 
-	err := h.taskService.UpdateTask(c.Request.Context(), task)
+	err = h.taskService.UpdateTask(c.Request.Context(), task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to update task"))
 		return
@@ -147,7 +158,13 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
 	id := c.Param("id")
 
-	err := h.taskService.DeleteTask(c.Request.Context(), id)
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
+
+	err = h.taskService.DeleteTask(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete task"))
 		return

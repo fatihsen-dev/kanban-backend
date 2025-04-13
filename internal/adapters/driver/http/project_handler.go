@@ -9,6 +9,7 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
@@ -33,7 +34,6 @@ func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
-
 	var requestData requests.ProjectCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
@@ -65,6 +65,12 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 	id := c.Param("id")
 
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
+		return
+	}
+
 	project, err := h.projectService.GetProjectByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get project"))
@@ -82,6 +88,12 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 
 func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 	projectID := c.Param("id")
+
+	err := validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
+		return
+	}
 
 	project, columns, tasksByColumn, err := h.projectService.GetProjectWithColumns(c.Request.Context(), projectID)
 	if err != nil {
