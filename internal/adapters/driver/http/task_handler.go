@@ -58,7 +58,13 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 	h.hub.SendMessage(task.ProjectID, ws.BaseResponse{
 		Name: "task_created",
-		Data: task,
+		Data: responses.TaskResponse{
+			ID:        task.ID,
+			Title:     task.Title,
+			ProjectID: task.ProjectID,
+			ColumnID:  task.ColumnID,
+			CreatedAt: task.CreatedAt.Format(time.RFC3339),
+		},
 	})
 
 	responseData := responses.TaskResponse{
