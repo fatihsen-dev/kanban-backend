@@ -57,17 +57,17 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 		return
 	}
 
-	h.hub.SendMessage(column.ProjectID, ws.BaseResponse{
-		Name: "column_created",
-		Data: column,
-	})
-
 	responseData := responses.ColumnResponse{
 		ID:        column.ID,
 		Name:      column.Name,
 		ProjectID: column.ProjectID,
 		CreatedAt: column.CreatedAt.Format(time.RFC3339),
 	}
+
+	h.hub.SendMessage(column.ProjectID, ws.BaseResponse{
+		Name: "column_created",
+		Data: responseData,
+	})
 
 	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Column created successfully", responseData))
 }
@@ -154,10 +154,17 @@ func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
 
 func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	id := c.Param("id")
+	projectID := c.Query("project_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
+		return
+	}
+
+	err = validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
 		return
 	}
 
@@ -178,15 +185,32 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column updated successfully", nil))
+	responseData := responses.ColumnUpdateResponse{
+		ID:   column.ID,
+		Name: column.Name,
+	}
+
+	h.hub.SendMessage(projectID, ws.BaseResponse{
+		Name: "column_updated",
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column updated successfully", responseData))
 }
 
 func (h *columnHandler) DeleteColumnHandler(c *gin.Context) {
 	id := c.Param("id")
+	projectID := c.Query("project_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
+		return
+	}
+
+	err = validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
 		return
 	}
 
@@ -196,5 +220,14 @@ func (h *columnHandler) DeleteColumnHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column deleted successfully", nil))
+	responseData := responses.ColumnDeleteResponse{
+		ID: id,
+	}
+
+	h.hub.SendMessage(projectID, ws.BaseResponse{
+		Name: "column_deleted",
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column deleted successfully", responseData))
 }

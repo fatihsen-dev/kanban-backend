@@ -127,10 +127,17 @@ func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 
 func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	id := c.Param("id")
+	projectID := c.Query("project_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
+
+	err = validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
 		return
 	}
 
@@ -144,12 +151,18 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 		ID: id,
 	}
 
+	responseData := responses.TaskUpdateResponse{
+		ID: task.ID,
+	}
+
 	if requestData.Title != "" {
 		task.Title = requestData.Title
+		responseData.Title = task.Title
 	}
 
 	if requestData.ColumnID != "" {
 		task.ColumnID = requestData.ColumnID
+		responseData.ColumnID = task.ColumnID
 	}
 
 	err = h.taskService.UpdateTask(c.Request.Context(), task)
@@ -158,15 +171,26 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task updated successfully", nil))
+	h.hub.SendMessage(projectID, ws.BaseResponse{
+		Name: "task_updated",
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task updated successfully", responseData))
 }
 
 func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
 	id := c.Param("id")
-
+	projectID := c.Query("project_id")
 	err := validation.ValidateUUID(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
+
+	err = validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
 		return
 	}
 
@@ -176,5 +200,14 @@ func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task deleted successfully", nil))
+	responseData := responses.TaskDeleteResponse{
+		ID: id,
+	}
+
+	h.hub.SendMessage(projectID, ws.BaseResponse{
+		Name: "task_deleted",
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task deleted successfully", responseData))
 }
