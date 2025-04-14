@@ -30,3 +30,11 @@ func (s *TaskService) GetTaskByID(ctx context.Context, id string) (*domain.Task,
 func (s *TaskService) GetTasks(ctx context.Context) ([]*domain.Task, error) {
 	return s.taskRepo.GetAll(ctx)
 }
+
+func (s *TaskService) UpdateTask(ctx context.Context, task *domain.Task) error {
+	return s.taskRepo.Update(ctx, task)
+}
+
+func (s *TaskService) DeleteTask(ctx context.Context, id string) error {
+	return s.taskRepo.Delete(ctx, id)
+}

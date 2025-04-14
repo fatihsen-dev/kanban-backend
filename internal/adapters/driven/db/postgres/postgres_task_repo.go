@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
+	"github.com/lib/pq"
 )
 
 type PostgresTaskRepository struct {
@@ -34,6 +35,26 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*domai
 	return &task, nil
 }
 
+func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, columnIDs []string) ([]*domain.Task, error) {
+	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1)`
+	rows, err := r.DB.QueryContext(ctx, query, pq.Array(columnIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*domain.Task
+	for rows.Next() {
+		var task domain.Task
+		err := rows.Scan(&task.ID, &task.Title, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &task)
+	}
+	return tasks, nil
+}
+
 func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, error) {
 	query := `SELECT id, title, column_id, project_id, created_at FROM tasks`
 	rows, err := r.DB.QueryContext(ctx, query)
@@ -52,4 +73,31 @@ func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, er
 		tasks = append(tasks, &task)
 	}
 	return tasks, nil
+}
+
+func (r *PostgresTaskRepository) Update(ctx context.Context, task *domain.Task) error {
+	query := `UPDATE tasks SET title = $1, column_id = $2 WHERE id = $3`
+	_, err := r.DB.ExecContext(ctx, query, task.Title, task.ColumnID, task.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM tasks WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresTaskRepository) DeleteTasksByColumnID(ctx context.Context, columnID string) error {
+	query := `DELETE FROM tasks WHERE column_id = $1`
+	_, err := r.DB.ExecContext(ctx, query, columnID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

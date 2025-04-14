@@ -3,8 +3,13 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
@@ -25,18 +30,15 @@ func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
 	r.POST("/tasks", h.authMiddleware.Handle, h.CreateTaskHandler)
 	r.GET("/tasks", h.authMiddleware.Handle, h.GetTasksHandler)
 	r.GET("/tasks/:id", h.authMiddleware.Handle, h.GetTaskHandler)
+	r.PUT("/tasks/:id", h.authMiddleware.Handle, h.UpdateTaskHandler)
+	r.DELETE("/tasks/:id", h.authMiddleware.Handle, h.DeleteTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
-
-	var requestData struct {
-		Title     string `json:"title"`
-		ProjectID string `json:"project_id"`
-		ColumnID  string `json:"column_id"`
-	}
+	var requestData requests.TaskCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
 	}
 
@@ -50,36 +52,162 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create task"))
 		return
 	}
 
 	h.hub.SendMessage(task.ProjectID, ws.BaseResponse{
 		Name: "task_created",
-		Data: task,
+		Data: responses.TaskResponse{
+			ID:        task.ID,
+			Title:     task.Title,
+			ProjectID: task.ProjectID,
+			ColumnID:  task.ColumnID,
+			CreatedAt: task.CreatedAt.Format(time.RFC3339),
+		},
 	})
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Project created successfully"})
+	responseData := responses.TaskResponse{
+		ID:        task.ID,
+		Title:     task.Title,
+		ProjectID: task.ProjectID,
+		ColumnID:  task.ColumnID,
+		CreatedAt: task.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Task created successfully", responseData))
 }
 
 func (h *taskHandler) GetTaskHandler(c *gin.Context) {
 	id := c.Param("id")
 
-	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
+	err := validation.ValidateUUID(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get task"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
 		return
 	}
 
-	c.JSON(http.StatusOK, task)
+	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get task"))
+		return
+	}
+
+	responseData := responses.TaskResponse{
+		ID:        task.ID,
+		Title:     task.Title,
+		ProjectID: task.ProjectID,
+		ColumnID:  task.ColumnID,
+		CreatedAt: task.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task fetched successfully", responseData))
 }
 
 func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 	tasks, err := h.taskService.GetTasks(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tasks"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get tasks"))
 		return
 	}
 
-	c.JSON(http.StatusOK, tasks)
+	responseData := make([]responses.TaskResponse, len(tasks))
+	for i, task := range tasks {
+		responseData[i] = responses.TaskResponse{
+			ID:        task.ID,
+			Title:     task.Title,
+			ProjectID: task.ProjectID,
+			ColumnID:  task.ColumnID,
+			CreatedAt: task.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Tasks fetched successfully", responseData))
+}
+
+func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
+	id := c.Param("id")
+	projectID := c.Query("project_id")
+
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
+
+	err = validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
+		return
+	}
+
+	var requestData requests.TaskUpdateRequest
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	task := &domain.Task{
+		ID: id,
+	}
+
+	responseData := responses.TaskUpdateResponse{
+		ID: task.ID,
+	}
+
+	if requestData.Title != "" {
+		task.Title = requestData.Title
+		responseData.Title = task.Title
+	}
+
+	if requestData.ColumnID != "" {
+		task.ColumnID = requestData.ColumnID
+		responseData.ColumnID = task.ColumnID
+	}
+
+	err = h.taskService.UpdateTask(c.Request.Context(), task)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to update task"))
+		return
+	}
+
+	h.hub.SendMessage(projectID, ws.BaseResponse{
+		Name: "task_updated",
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task updated successfully", responseData))
+}
+
+func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
+	id := c.Param("id")
+	projectID := c.Query("project_id")
+	err := validation.ValidateUUID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))
+		return
+	}
+
+	err = validation.ValidateUUID(projectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
+		return
+	}
+
+	err = h.taskService.DeleteTask(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete task"))
+		return
+	}
+
+	responseData := responses.TaskDeleteResponse{
+		ID: id,
+	}
+
+	h.hub.SendMessage(projectID, ws.BaseResponse{
+		Name: "task_deleted",
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task deleted successfully", responseData))
 }

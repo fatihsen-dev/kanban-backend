@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/gin-gonic/gin"
@@ -26,7 +28,6 @@ func (h *userHandler) RegisterUserRouter(r *gin.Engine) {
 }
 
 func (h *userHandler) CreateUserHandler(c *gin.Context) {
-
 	var requestData struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
@@ -34,7 +35,7 @@ func (h *userHandler) CreateUserHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
 		return
 	}
 
@@ -48,31 +49,37 @@ func (h *userHandler) CreateUserHandler(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create user"))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("User created successfully", nil))
 }
 
 func (h *userHandler) GetUserHandler(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 
-	user, err := h.userService.GetUserByID(c.Request.Context(), id)
+	err := validation.ValidateUUID(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid user ID"))
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	user, err := h.userService.GetUserByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get user"))
+		return
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("User fetched successfully", user))
 }
 
 func (h *userHandler) GetUsersHandler(c *gin.Context) {
 	users, err := h.userService.GetUsers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get users"})
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get users"))
 		return
 	}
 
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Users fetched successfully", users))
 }
