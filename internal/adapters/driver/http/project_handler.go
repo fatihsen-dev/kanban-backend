@@ -13,6 +13,7 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
+	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,6 +35,8 @@ func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
+	userClaims := c.MustGet("user").(*jwt.UserClaims)
+
 	var requestData requests.ProjectCreateRequest
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
@@ -42,7 +45,8 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 	}
 
 	project := &domain.Project{
-		Name: requestData.Name,
+		Name:    requestData.Name,
+		OwnerID: userClaims.UserID,
 	}
 
 	err := h.projectService.CreateProject(c.Request.Context(), project)
@@ -56,6 +60,7 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 	responseData := responses.ProjectResponse{
 		ID:        project.ID,
 		Name:      project.Name,
+		OwnerID:   project.OwnerID,
 		CreatedAt: project.CreatedAt.Format(time.RFC3339),
 	}
 
@@ -73,7 +78,7 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 
 	project, err := h.projectService.GetProjectByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get project"))
+		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
 		return
 	}
 
@@ -97,7 +102,7 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 
 	project, columns, tasksByColumn, err := h.projectService.GetProjectWithColumns(c.Request.Context(), projectID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get project details"))
+		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
 		return
 	}
 
@@ -126,6 +131,7 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 	response := responses.ProjectWithDetailsResponse{
 		ID:        project.ID,
 		Name:      project.Name,
+		OwnerID:   project.OwnerID,
 		CreatedAt: project.CreatedAt.Format(time.RFC3339),
 		Columns:   columnResponses,
 	}

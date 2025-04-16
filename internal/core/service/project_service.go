@@ -30,7 +30,11 @@ func (s *ProjectService) CreateProject(ctx context.Context, project *domain.Proj
 }
 
 func (s *ProjectService) GetProjectByID(ctx context.Context, id string) (*domain.Project, error) {
-	return s.projectRepo.GetByID(ctx, id)
+	project, err := s.projectRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return project, nil
 }
 
 func (s *ProjectService) GetProjects(ctx context.Context) ([]*domain.Project, error) {
