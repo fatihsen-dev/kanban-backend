@@ -44,6 +44,11 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 		return
 	}
 
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
 	column := &domain.Column{
 		Name:      requestData.Name,
 		ProjectID: requestData.ProjectID,
@@ -171,6 +176,11 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	var requestData requests.ColumnUpdateRequest
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 

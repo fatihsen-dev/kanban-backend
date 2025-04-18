@@ -42,6 +42,11 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 		return
 	}
 
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
 	task := &domain.Task{
 		Title:     requestData.Title,
 		ProjectID: requestData.ProjectID,
@@ -144,6 +149,11 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	var requestData requests.TaskUpdateRequest
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 

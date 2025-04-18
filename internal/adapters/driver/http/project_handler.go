@@ -44,6 +44,11 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 		return
 	}
 
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
 	project := &domain.Project{
 		Name:    requestData.Name,
 		OwnerID: userClaims.UserID,
