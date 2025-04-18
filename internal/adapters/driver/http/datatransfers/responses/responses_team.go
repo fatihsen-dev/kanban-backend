@@ -20,10 +20,10 @@ type DeleteTeamResponse struct {
 }
 
 type TeamWithMembersResponse struct {
-	ID        string               `json:"id"`
-	Name      string               `json:"name"`
-	Role      string               `json:"role"`
-	ProjectID string               `json:"project_id"`
-	CreatedAt string               `json:"created_at"`
-	Members   []TeamMemberResponse `json:"members"`
+	ID        string                  `json:"id"`
+	Name      string                  `json:"name"`
+	Role      string                  `json:"role"`
+	ProjectID string                  `json:"project_id"`
+	CreatedAt string                  `json:"created_at"`
+	Members   []ProjectMemberResponse `json:"members"`
 }

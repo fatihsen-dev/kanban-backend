@@ -9,17 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthMiddleware struct {
+type AuthnMiddleware struct {
 	isAdmin bool
 }
 
-func NewAuthMiddleware(isAdmin bool) *AuthMiddleware {
-	return (&AuthMiddleware{
-		isAdmin: isAdmin,
-	})
+func NewAuthnMiddleware() *AuthnMiddleware {
+	return (&AuthnMiddleware{})
 }
 
-func (m *AuthMiddleware) Handle(ctx *gin.Context) {
+func (m *AuthnMiddleware) Handle(ctx *gin.Context) {
 	authHeader := ctx.GetHeader("Authorization")
 	if authHeader == "" {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("missing authorization header"))

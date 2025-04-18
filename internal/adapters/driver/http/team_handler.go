@@ -17,11 +17,11 @@ import (
 
 type teamHandler struct {
 	teamService    ports.TeamService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 	hub            *ws.Hub
 }
 
-func NewTeamHandler(teamService ports.TeamService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *teamHandler {
+func NewTeamHandler(teamService ports.TeamService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *teamHandler {
 	return &teamHandler{teamService: teamService, authMiddleware: authMiddleware, hub: hub}
 }
 
@@ -121,11 +121,11 @@ func (h *teamHandler) GetTeamHandler(c *gin.Context) {
 		Name:      team.Name,
 		ProjectID: team.ProjectID,
 		CreatedAt: team.CreatedAt.Format(time.RFC3339),
-		Members:   make([]responses.TeamMemberResponse, len(teamMembers)),
+		Members:   make([]responses.ProjectMemberResponse, len(teamMembers)),
 	}
 
 	for i, teamMember := range teamMembers {
-		responseData.Members[i] = responses.TeamMemberResponse{
+		responseData.Members[i] = responses.ProjectMemberResponse{
 			ID:        teamMember.ID,
 			TeamID:    teamMember.TeamID,
 			UserID:    teamMember.UserID,
@@ -221,7 +221,7 @@ func (h *teamHandler) CreateTeamMemberHandler(c *gin.Context) {
 	id := c.Param("id")
 	projectID := c.Query("project_id")
 
-	var requestData requests.CreateTeamMemberRequest
+	var requestData requests.CreateProjectMemberRequest
 
 	requestData.TeamID = id
 	requestData.ProjectID = projectID
@@ -236,23 +236,23 @@ func (h *teamHandler) CreateTeamMemberHandler(c *gin.Context) {
 		return
 	}
 
-	teamMember := &domain.TeamMember{
+	projectMember := &domain.ProjectMember{
 		TeamID:    id,
 		UserID:    requestData.UserID,
 		ProjectID: projectID,
 	}
 
-	err := h.teamService.CreateTeamMember(c.Request.Context(), teamMember)
+	err := h.teamService.CreateTeamMember(c.Request.Context(), projectMember)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to add team member"))
 		return
 	}
 
-	responseData := responses.TeamMemberResponse{
-		ID:        teamMember.ID,
-		TeamID:    teamMember.TeamID,
-		UserID:    teamMember.UserID,
-		CreatedAt: teamMember.CreatedAt.Format(time.RFC3339),
+	responseData := responses.ProjectMemberResponse{
+		ID:        projectMember.ID,
+		TeamID:    projectMember.TeamID,
+		UserID:    projectMember.UserID,
+		CreatedAt: projectMember.CreatedAt.Format(time.RFC3339),
 	}
 
 	h.hub.SendMessage(projectID, ws.BaseResponse{
@@ -268,7 +268,7 @@ func (h *teamHandler) DeleteTeamMemberHandler(c *gin.Context) {
 	memberID := c.Param("member_id")
 	projectID := c.Query("project_id")
 
-	var requestData requests.DeleteTeamMemberRequest
+	var requestData requests.DeleteProjectMemberRequest
 	requestData.TeamID = id
 	requestData.MemberID = memberID
 	requestData.ProjectID = projectID
@@ -289,7 +289,7 @@ func (h *teamHandler) DeleteTeamMemberHandler(c *gin.Context) {
 		return
 	}
 
-	responseData := responses.DeleteTeamMemberResponse{
+	responseData := responses.DeleteProjectMemberResponse{
 		ID: requestData.MemberID,
 	}
 

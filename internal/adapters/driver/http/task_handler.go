@@ -18,11 +18,11 @@ import (
 
 type taskHandler struct {
 	taskService    ports.TaskService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 	hub            *ws.Hub
 }
 
-func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *taskHandler {
+func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *taskHandler {
 	return &taskHandler{taskService: taskService, authMiddleware: authMiddleware, hub: hub}
 }
 

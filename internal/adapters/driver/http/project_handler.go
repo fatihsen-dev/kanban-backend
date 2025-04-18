@@ -19,11 +19,11 @@ import (
 
 type projectHandler struct {
 	projectService ports.ProjectService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 	hub            *ws.Hub
 }
 
-func NewProjectHandler(projectService ports.ProjectService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *projectHandler {
+func NewProjectHandler(projectService ports.ProjectService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *projectHandler {
 	return &projectHandler{projectService: projectService, authMiddleware: authMiddleware, hub: hub}
 }
 
@@ -105,13 +105,36 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 		return
 	}
 
-	project, columns, tasksByColumn, err := h.projectService.GetProjectWithColumns(c.Request.Context(), projectID)
+	project, columns, tasksByColumn, teams, projectMembers, err := h.projectService.GetProjectWithDetails(c.Request.Context(), projectID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
 		return
 	}
 
-	columnResponses := make([]responses.ColumnWithTasksResponse, len(columns))
+	teamResponses := make([]responses.TeamResponse, len(teams))
+	for i, team := range teams {
+		teamResponses[i] = responses.TeamResponse{
+			ID:        team.ID,
+			Name:      team.Name,
+			Role:      team.Role,
+			ProjectID: team.ProjectID,
+			CreatedAt: team.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	memberResponses := make([]responses.ProjectMemberResponse, len(projectMembers))
+	for i, member := range projectMembers {
+		memberResponses[i] = responses.ProjectMemberResponse{
+			ID:        member.ID,
+			TeamID:    member.TeamID,
+			UserID:    member.UserID,
+			Role:      member.Role,
+			ProjectID: member.ProjectID,
+			CreatedAt: member.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	columnResponses := make([]responses.ColumnWithDetailsResponse, len(columns))
 	for i, column := range columns {
 		tasks := tasksByColumn[column.ID]
 		taskResponses := make([]responses.TaskResponse, len(tasks))
@@ -125,7 +148,7 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 			}
 		}
 
-		columnResponses[i] = responses.ColumnWithTasksResponse{
+		columnResponses[i] = responses.ColumnWithDetailsResponse{
 			ID:        column.ID,
 			Name:      column.Name,
 			CreatedAt: column.CreatedAt.Format(time.RFC3339),
@@ -139,6 +162,8 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 		OwnerID:   project.OwnerID,
 		CreatedAt: project.CreatedAt.Format(time.RFC3339),
 		Columns:   columnResponses,
+		Teams:     teamResponses,
+		Members:   memberResponses,
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project details fetched successfully", response))
