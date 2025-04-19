@@ -7,6 +7,6 @@ type ProjectMember struct {
 	TeamID    string
 	UserID    string
 	ProjectID string
-	Role      string // Admin, Write, Read
+	Role      string // Owner, Admin, Write, Read
 	CreatedAt time.Time
 }

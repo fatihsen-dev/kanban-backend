@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
@@ -75,11 +77,40 @@ func (r *PostgresColumnRepository) GetAll(ctx context.Context) ([]*domain.Column
 }
 
 func (r *PostgresColumnRepository) Update(ctx context.Context, column *domain.Column) error {
-	query := `UPDATE columns SET name = $1 WHERE id = $2`
-	_, err := r.DB.ExecContext(ctx, query, column.Name, column.ID)
-	if err != nil {
-		return err
+	queryBase := "UPDATE columns SET "
+	queryWhere := " WHERE id = $%d"
+
+	setClauses := []string{}
+	args := []interface{}{}
+	paramIndex := 1
+
+	if column.Name != "" {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", paramIndex))
+		args = append(args, column.Name)
+		paramIndex++
 	}
+
+	if column.ProjectID != "" {
+		setClauses = append(setClauses, fmt.Sprintf("project_id = $%d", paramIndex))
+		args = append(args, column.ProjectID)
+		paramIndex++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	querySet := strings.Join(setClauses, ", ")
+
+	args = append(args, column.ID)
+
+	finalQuery := queryBase + querySet + fmt.Sprintf(queryWhere, paramIndex)
+
+	_, err := r.DB.ExecContext(ctx, finalQuery, args...)
+	if err != nil {
+		return fmt.Errorf("column update failed: %w", err)
+	}
+
 	return nil
 }
 

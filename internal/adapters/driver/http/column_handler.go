@@ -27,17 +27,19 @@ func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlew
 }
 
 func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
-	r.POST("/columns", h.authMiddleware.Handle, h.CreateColumnHandler)
-	r.GET("/columns", h.authMiddleware.Handle, h.GetColumnsHandler)
-	r.GET("/columns/:id", h.authMiddleware.Handle, h.GetColumnHandler)
-	r.GET("/columns/:id/tasks", h.authMiddleware.Handle, h.GetColumnWithTasksHandler)
-	r.PUT("/columns/:id", h.authMiddleware.Handle, h.UpdateColumnHandler)
-	r.DELETE("/columns/:id", h.authMiddleware.Handle, h.DeleteColumnHandler)
+	r.POST("/projects/:project_id/columns", h.authMiddleware.Handle, h.CreateColumnHandler)
+	r.GET("/projects/:project_id/columns", h.authMiddleware.Handle, h.GetColumnsHandler)
+	r.GET("/projects/:project_id/columns/:column_id", h.authMiddleware.Handle, h.GetColumnHandler)
+	r.PUT("/projects/:project_id/columns/:column_id", h.authMiddleware.Handle, h.UpdateColumnHandler)
+	r.DELETE("/projects/:project_id/columns/:column_id", h.authMiddleware.Handle, h.DeleteColumnHandler)
 }
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
+	projectID := c.Param("project_id")
 
 	var requestData requests.ColumnCreateRequest
+
+	requestData.ProjectID = projectID
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
@@ -78,7 +80,7 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 }
 
 func (h *columnHandler) GetColumnHandler(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("column_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
@@ -86,32 +88,7 @@ func (h *columnHandler) GetColumnHandler(c *gin.Context) {
 		return
 	}
 
-	column, err := h.columnService.GetColumnByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get column"))
-		return
-	}
-
-	responseData := responses.ColumnResponse{
-		ID:        column.ID,
-		Name:      column.Name,
-		ProjectID: column.ProjectID,
-		CreatedAt: column.CreatedAt.Format(time.RFC3339),
-	}
-
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Column fetched successfully", responseData))
-}
-
-func (h *columnHandler) GetColumnWithTasksHandler(c *gin.Context) {
-	id := c.Param("id")
-
-	err := validation.ValidateUUID(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid column ID"))
-		return
-	}
-
-	column, tasks, err := h.columnService.GetColumnWithTasks(c.Request.Context(), id)
+	column, tasks, err := h.columnService.GetColumnWithDetails(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get column with tasks"))
 		return
@@ -138,7 +115,9 @@ func (h *columnHandler) GetColumnWithTasksHandler(c *gin.Context) {
 }
 
 func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
-	columns, err := h.columnService.GetColumns(c.Request.Context())
+	projectID := c.Param("project_id")
+
+	columns, err := h.columnService.GetColumnsByProjectID(c.Request.Context(), projectID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get columns"))
 		return
@@ -158,8 +137,8 @@ func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
 }
 
 func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
-	id := c.Param("id")
-	projectID := c.Query("project_id")
+	id := c.Param("column_id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
@@ -185,8 +164,11 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	}
 
 	column := &domain.Column{
-		ID:   id,
-		Name: requestData.Name,
+		ID: id,
+	}
+
+	if requestData.Name != nil {
+		column.Name = *requestData.Name
 	}
 
 	err = h.columnService.UpdateColumn(c.Request.Context(), column)
@@ -209,8 +191,8 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 }
 
 func (h *columnHandler) DeleteColumnHandler(c *gin.Context) {
-	id := c.Param("id")
-	projectID := c.Query("project_id")
+	id := c.Param("column_id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {

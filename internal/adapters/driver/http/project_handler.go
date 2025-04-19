@@ -30,8 +30,7 @@ func NewProjectHandler(projectService ports.ProjectService, authMiddleware *midd
 func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 	r.POST("/projects", h.authMiddleware.Handle, h.CreateProjectHandler)
 	r.GET("/projects", h.authMiddleware.Handle, h.GetProjectsHandler)
-	r.GET("/projects/:id", h.authMiddleware.Handle, h.GetProjectHandler)
-	r.GET("/projects/:id/columns", h.authMiddleware.Handle, h.GetProjectWithColumnsHandler)
+	r.GET("/projects/:project_id", h.authMiddleware.Handle, h.GetProjectHandler)
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
@@ -73,31 +72,7 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 }
 
 func (h *projectHandler) GetProjectHandler(c *gin.Context) {
-	id := c.Param("id")
-
-	err := validation.ValidateUUID(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
-		return
-	}
-
-	project, err := h.projectService.GetProjectByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
-		return
-	}
-
-	responseData := responses.ProjectResponse{
-		ID:        project.ID,
-		Name:      project.Name,
-		CreatedAt: project.CreatedAt.Format(time.RFC3339),
-	}
-
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project fetched successfully", responseData))
-}
-
-func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
-	projectID := c.Param("id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(projectID)
 	if err != nil {

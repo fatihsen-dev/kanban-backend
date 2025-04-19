@@ -32,7 +32,6 @@ func (h *teamHandler) RegisterTeamRouter(r *gin.Engine) {
 	r.PUT("/teams/:id", h.authMiddleware.Handle, h.UpdateTeamHandler)
 	r.DELETE("/teams/:id", h.authMiddleware.Handle, h.DeleteTeamHandler)
 	r.POST("/teams/:id/members", h.authMiddleware.Handle, h.CreateTeamMemberHandler)
-	r.DELETE("/teams/:id/members/:member_id", h.authMiddleware.Handle, h.DeleteTeamMemberHandler)
 }
 
 func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
@@ -157,9 +156,15 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	}
 
 	team := &domain.Team{
-		ID:   id,
-		Name: requestData.Name,
-		Role: requestData.Role,
+		ID: id,
+	}
+
+	if requestData.Name != nil {
+		team.Name = *requestData.Name
+	}
+
+	if requestData.Role != nil {
+		team.Role = *requestData.Role
 	}
 
 	err = h.teamService.UpdateTeam(c.Request.Context(), team)
@@ -261,42 +266,4 @@ func (h *teamHandler) CreateTeamMemberHandler(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Team member added successfully", responseData))
-}
-
-func (h *teamHandler) DeleteTeamMemberHandler(c *gin.Context) {
-	id := c.Param("id")
-	memberID := c.Param("member_id")
-	projectID := c.Query("project_id")
-
-	var requestData requests.DeleteProjectMemberRequest
-	requestData.TeamID = id
-	requestData.MemberID = memberID
-	requestData.ProjectID = projectID
-
-	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := validation.Validate(requestData); err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
-		return
-	}
-
-	err := h.teamService.DeleteTeamMemberByID(c.Request.Context(), requestData.TeamID, requestData.MemberID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete team member"))
-		return
-	}
-
-	responseData := responses.DeleteProjectMemberResponse{
-		ID: requestData.MemberID,
-	}
-
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "team_member_deleted",
-		Data: responseData,
-	})
-
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Team member deleted successfully", responseData))
 }

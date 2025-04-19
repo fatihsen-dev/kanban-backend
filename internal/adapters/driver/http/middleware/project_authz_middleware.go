@@ -12,29 +12,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type MemberType string
+
+const (
+	Admin MemberType = "admin"
+	Owner MemberType = "owner"
+)
+
 type AuthzMiddleware struct {
-	projectIdSource string
-	fieldName       string
-	teamService     ports.TeamService
+	projectMemberService ports.ProjectMemberService
+	teamService          ports.TeamService
 }
 
-func NewAuthzMiddleware(projectIdSource string, fieldName string, teamService ports.TeamService) *AuthzMiddleware {
+func NewAuthzMiddleware(projectMemberService ports.ProjectMemberService, teamService ports.TeamService) *AuthzMiddleware {
 	return (&AuthzMiddleware{
-		projectIdSource: projectIdSource,
-		fieldName:       fieldName,
-		teamService:     teamService,
+		projectMemberService: projectMemberService,
+		teamService:          teamService,
 	})
 }
 
-func (m *AuthzMiddleware) Handle(ctx *gin.Context) {
+func (m *AuthzMiddleware) Handle(ctx *gin.Context, projectIdSource string, fieldName string, memberType MemberType) {
 	user := ctx.MustGet("user").(*jwt.UserClaims)
-	projectID, err := m.getProjectID(ctx)
+	projectID, err := m.getProjectID(ctx, projectIdSource, fieldName)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, datatransfers.ResponseAbort(err.Error()))
 		return
 	}
 
-	fmt.Println("projectID", projectID)
+	fmt.Println("memberType", projectID, memberType)
 
 	if user.IsAdmin {
 		ctx.Next()
@@ -44,21 +49,30 @@ func (m *AuthzMiddleware) Handle(ctx *gin.Context) {
 	ctx.Next()
 }
 
-func (m *AuthzMiddleware) getProjectID(ctx *gin.Context) (string, error) {
+func (m *AuthzMiddleware) getProjectID(ctx *gin.Context, projectIdSource string, fieldName string) (string, error) {
 	projectID := ""
 
-	switch m.projectIdSource {
+	switch projectIdSource {
 	case "query":
-		switch m.fieldName {
+		switch fieldName {
 		case "project_id":
-			projectID = ctx.Query(m.fieldName)
+			projectID = ctx.Query(fieldName)
 		case "id":
-			projectID = ctx.Param(m.fieldName)
+			projectID = ctx.Query(fieldName)
+		default:
+			return "", errors.New("invalid project id")
+		}
+	case "param":
+		switch fieldName {
+		case "project_id":
+			projectID = ctx.Param(fieldName)
+		case "id":
+			projectID = ctx.Param(fieldName)
 		default:
 			return "", errors.New("invalid project id")
 		}
 	case "body":
-		switch m.fieldName {
+		switch fieldName {
 		case "project_id":
 			var requestData struct {
 				ProjectID string `json:"project_id"`
@@ -68,7 +82,13 @@ func (m *AuthzMiddleware) getProjectID(ctx *gin.Context) (string, error) {
 			}
 			projectID = requestData.ProjectID
 		case "id":
-			projectID = ctx.Param(m.fieldName)
+			var requestData struct {
+				ID string `json:"id"`
+			}
+			if err := ctx.ShouldBindJSON(&requestData); err != nil {
+				return "", errors.New("invalid project id")
+			}
+			projectID = requestData.ID
 		default:
 			return "", errors.New("invalid project id")
 		}
