@@ -16,7 +16,7 @@ type ColumnDeleteResponse struct {
 	ID string `json:"id"`
 }
 
-type ColumnWithTasksResponse struct {
+type ColumnWithDetailsResponse struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
 	CreatedAt string         `json:"created_at"`

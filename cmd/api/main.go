@@ -35,7 +35,7 @@ func main() {
 
 	postgresDB := db.NewPostgresRepository(appConfig.DBUrl)
 
-	authMiddleware := middlewares.NewAuthMiddleware(false)
+	authnMiddleware := middlewares.NewAuthnMiddleware()
 
 	hub := ws.NewHub()
 	go hub.Run()
@@ -47,30 +47,32 @@ func main() {
 	// /users/* routes
 	userRepo := db.NewPostgresUserRepo(postgresDB)
 	userService := service.NewUserService(userRepo)
-	userHandler := httphandler.NewUserHandler(userService, authMiddleware)
+	userHandler := httphandler.NewUserHandler(userService, authnMiddleware)
 	userHandler.RegisterUserRouter(router)
 
 	// /auth/* routes
-	authHandler := httphandler.NewAuthHandler(userService, authMiddleware)
+	authHandler := httphandler.NewAuthHandler(userService, authnMiddleware)
 	authHandler.RegisterAuthRouter(router)
 
 	projectRepo := db.NewPostgresProjectRepo(postgresDB)
 	columnRepo := db.NewPostgresColumnRepo(postgresDB)
 	taskRepo := db.NewPostgresTaskRepo(postgresDB)
+	teamRepo := db.NewPostgresTeamRepo(postgresDB)
+	projectMemberRepo := db.NewPostgresProjectMemberRepo(postgresDB)
 
 	// /projects/* routes
-	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo)
-	projectHandler := httphandler.NewProjectHandler(projectService, authMiddleware, hub)
+	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo, teamRepo, projectMemberRepo)
+	projectHandler := httphandler.NewProjectHandler(projectService, authnMiddleware, hub)
 	projectHandler.RegisterProjectRouter(router)
 
 	// /columns/* routes
 	columnService := service.NewColumnService(columnRepo, taskRepo)
-	columnHandler := httphandler.NewColumnHandler(columnService, authMiddleware, hub)
+	columnHandler := httphandler.NewColumnHandler(columnService, authnMiddleware, hub)
 	columnHandler.RegisterColumnRouter(router)
 
 	// /tasks/* routes
 	taskService := service.NewTaskService(taskRepo)
-	taskHandler := httphandler.NewTaskHandler(taskService, authMiddleware, hub)
+	taskHandler := httphandler.NewTaskHandler(taskService, authnMiddleware, hub)
 	taskHandler.RegisterTaskRouter(router)
 
 	router.Run(fmt.Sprintf(":%s", appConfig.Port))

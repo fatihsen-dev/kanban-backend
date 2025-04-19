@@ -19,10 +19,10 @@ import (
 
 type authHandler struct {
 	userService    ports.UserService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 }
 
-func NewAuthHandler(userService ports.UserService, authMiddleware *middlewares.AuthMiddleware) *authHandler {
+func NewAuthHandler(userService ports.UserService, authMiddleware *middlewares.AuthnMiddleware) *authHandler {
 	return &authHandler{userService: userService, authMiddleware: authMiddleware}
 }
 
@@ -140,17 +140,7 @@ func (h *authHandler) RegisterHandler(c *gin.Context) {
 }
 
 func (h *authHandler) AuthUser(c *gin.Context) {
-	requestUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, datatransfers.ResponseError("Unauthorized"))
-		return
-	}
-
-	userClaims, ok := requestUser.(*jwt.UserClaims)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, datatransfers.ResponseError("Unauthorized"))
-		return
-	}
+	userClaims := c.MustGet("user").(*jwt.UserClaims)
 
 	user, err := h.userService.GetUserByID(c.Request.Context(), userClaims.UserID)
 	if err != nil {

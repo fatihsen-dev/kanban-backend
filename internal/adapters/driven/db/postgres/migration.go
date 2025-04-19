@@ -23,7 +23,9 @@ func Migrate(db *sql.DB) {
 	query = `CREATE TABLE IF NOT EXISTS projects (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		name VARCHAR(255) NOT NULL,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		owner_id UUID NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (owner_id) REFERENCES users(id)
 	)`
 	_, err = db.Exec(query)
 	if err != nil {
@@ -50,6 +52,35 @@ func Migrate(db *sql.DB) {
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (column_id) REFERENCES columns(id),
 		FOREIGN KEY (project_id) REFERENCES projects(id)
+	)`
+	_, err = db.Exec(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query = `CREATE TABLE IF NOT EXISTS teams (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		name VARCHAR(255) NOT NULL,
+		project_id UUID NOT NULL,
+		role VARCHAR(255) NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (project_id) REFERENCES projects(id)
+	)`
+	_, err = db.Exec(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query = `CREATE TABLE IF NOT EXISTS project_members (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		project_id UUID NOT NULL,
+		user_id UUID NOT NULL,
+		role VARCHAR(255) NOT NULL,
+		team_id UUID,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (project_id) REFERENCES projects(id),
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		FOREIGN KEY (team_id) REFERENCES teams(id)
 	)`
 	_, err = db.Exec(query)
 	if err != nil {

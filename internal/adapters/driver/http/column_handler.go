@@ -18,11 +18,11 @@ import (
 
 type columnHandler struct {
 	columnService  ports.ColumnService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 	hub            *ws.Hub
 }
 
-func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *columnHandler {
+func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *columnHandler {
 	return &columnHandler{columnService: columnService, authMiddleware: authMiddleware, hub: hub}
 }
 
@@ -41,6 +41,11 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 
@@ -112,7 +117,7 @@ func (h *columnHandler) GetColumnWithTasksHandler(c *gin.Context) {
 		return
 	}
 
-	responseData := responses.ColumnWithTasksResponse{
+	responseData := responses.ColumnWithDetailsResponse{
 		ID:        column.ID,
 		Name:      column.Name,
 		CreatedAt: column.CreatedAt.Format(time.RFC3339),
@@ -171,6 +176,11 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	var requestData requests.ColumnUpdateRequest
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 

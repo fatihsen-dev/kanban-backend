@@ -18,11 +18,11 @@ import (
 
 type taskHandler struct {
 	taskService    ports.TaskService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 	hub            *ws.Hub
 }
 
-func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthMiddleware, hub *ws.Hub) *taskHandler {
+func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *taskHandler {
 	return &taskHandler{taskService: taskService, authMiddleware: authMiddleware, hub: hub}
 }
 
@@ -39,6 +39,11 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 
@@ -144,6 +149,11 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	var requestData requests.TaskUpdateRequest
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 

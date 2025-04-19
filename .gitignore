@@ -29,3 +29,6 @@ go.work.sum
 
 # tmp
 /tmp
+
+# todo
+todo.md

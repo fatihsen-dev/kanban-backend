@@ -14,10 +14,10 @@ import (
 
 type userHandler struct {
 	userService    ports.UserService
-	authMiddleware *middlewares.AuthMiddleware
+	authMiddleware *middlewares.AuthnMiddleware
 }
 
-func NewUserHandler(userService ports.UserService, authMiddleware *middlewares.AuthMiddleware) *userHandler {
+func NewUserHandler(userService ports.UserService, authMiddleware *middlewares.AuthnMiddleware) *userHandler {
 	return &userHandler{userService: userService, authMiddleware: authMiddleware}
 }
 
