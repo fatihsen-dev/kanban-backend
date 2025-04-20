@@ -98,7 +98,7 @@ func (h *taskHandler) GetTaskHandler(c *gin.Context) {
 
 	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get task"))
+		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Task not found"))
 		return
 	}
 
