@@ -15,6 +15,7 @@ import (
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type projectHandler struct {
@@ -50,13 +51,13 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 
 	project := &domain.Project{
 		Name:    requestData.Name,
-		OwnerID: userClaims.UserID,
+		OwnerID: userClaims.ID,
 	}
 
 	err := h.projectService.CreateProject(c.Request.Context(), project)
 
 	if err != nil {
-		fmt.Println(err)
+		zap.L().Error("Failed to create project", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create project"))
 		return
 	}
@@ -102,11 +103,14 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 	for i, member := range projectMembers {
 		memberResponses[i] = responses.ProjectMemberResponse{
 			ID:        member.ID,
-			TeamID:    member.TeamID,
 			UserID:    member.UserID,
 			Role:      member.Role,
 			ProjectID: member.ProjectID,
 			CreatedAt: member.CreatedAt.Format(time.RFC3339),
+		}
+
+		if member.TeamID != nil {
+			memberResponses[i].TeamID = *member.TeamID
 		}
 	}
 
@@ -147,7 +151,8 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 }
 
 func (h *projectHandler) GetProjectsHandler(c *gin.Context) {
-	projects, err := h.projectService.GetProjects(c.Request.Context())
+	userClaims := c.MustGet("user").(*jwt.UserClaims)
+	projects, err := h.projectService.GetUserProjects(c.Request.Context(), userClaims.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get projects"))
 		return

@@ -126,7 +126,7 @@ func (h *teamHandler) GetTeamHandler(c *gin.Context) {
 	for i, teamMember := range teamMembers {
 		responseData.Members[i] = responses.ProjectMemberResponse{
 			ID:        teamMember.ID,
-			TeamID:    teamMember.TeamID,
+			TeamID:    *teamMember.TeamID,
 			UserID:    teamMember.UserID,
 			CreatedAt: teamMember.CreatedAt.Format(time.RFC3339),
 		}
@@ -242,7 +242,7 @@ func (h *teamHandler) CreateTeamMemberHandler(c *gin.Context) {
 	}
 
 	projectMember := &domain.ProjectMember{
-		TeamID:    id,
+		TeamID:    &id,
 		UserID:    requestData.UserID,
 		ProjectID: projectID,
 	}
@@ -255,7 +255,7 @@ func (h *teamHandler) CreateTeamMemberHandler(c *gin.Context) {
 
 	responseData := responses.ProjectMemberResponse{
 		ID:        projectMember.ID,
-		TeamID:    projectMember.TeamID,
+		TeamID:    *projectMember.TeamID,
 		UserID:    projectMember.UserID,
 		CreatedAt: projectMember.CreatedAt.Format(time.RFC3339),
 	}

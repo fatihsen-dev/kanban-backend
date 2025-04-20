@@ -142,7 +142,7 @@ func (h *authHandler) RegisterHandler(c *gin.Context) {
 func (h *authHandler) AuthUser(c *gin.Context) {
 	userClaims := c.MustGet("user").(*jwt.UserClaims)
 
-	user, err := h.userService.GetUserByID(c.Request.Context(), userClaims.UserID)
+	user, err := h.userService.GetUserByID(c.Request.Context(), userClaims.ID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, datatransfers.ResponseError("Unauthorized"))
 		return

@@ -4,7 +4,7 @@ import "time"
 
 type ProjectMember struct {
 	ID        string
-	TeamID    string
+	TeamID    *string
 	UserID    string
 	ProjectID string
 	Role      string // Owner, Admin, Write, Read

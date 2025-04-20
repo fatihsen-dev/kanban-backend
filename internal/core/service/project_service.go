@@ -27,6 +27,7 @@ func NewProjectService(projectRepo ports.ProjectRepository, columnRepo ports.Col
 
 func (s *ProjectService) CreateProject(ctx context.Context, project *domain.Project) error {
 	err := s.projectRepo.Save(ctx, project)
+
 	if err != nil {
 		return err
 	}
@@ -53,8 +54,8 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id string) (*domain
 	return project, nil
 }
 
-func (s *ProjectService) GetProjects(ctx context.Context) ([]*domain.Project, error) {
-	return s.projectRepo.GetAll(ctx)
+func (s *ProjectService) GetUserProjects(ctx context.Context, userID string) ([]*domain.Project, error) {
+	return s.projectRepo.GetUserProjects(ctx, userID)
 }
 
 func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID string) (*domain.Project, []*domain.Column, map[string][]*domain.Task, []*domain.Team, []*domain.ProjectMember, error) {

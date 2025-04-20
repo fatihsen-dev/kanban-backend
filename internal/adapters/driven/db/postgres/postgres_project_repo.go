@@ -35,9 +35,9 @@ func (r *PostgresProjectRepository) GetByID(ctx context.Context, id string) (*do
 	return &project, nil
 }
 
-func (r *PostgresProjectRepository) GetAll(ctx context.Context) ([]*domain.Project, error) {
-	query := `SELECT id, name, owner_id, created_at FROM projects`
-	rows, err := r.DB.QueryContext(ctx, query)
+func (r *PostgresProjectRepository) GetUserProjects(ctx context.Context, userID string) ([]*domain.Project, error) {
+	query := `SELECT id, name, owner_id, created_at FROM projects WHERE owner_id = $1`
+	rows, err := r.DB.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
