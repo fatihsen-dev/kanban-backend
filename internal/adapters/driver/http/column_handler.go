@@ -53,6 +53,7 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 
 	column := &domain.Column{
 		Name:      requestData.Name,
+		Color:     requestData.Color,
 		ProjectID: requestData.ProjectID,
 	}
 
@@ -67,6 +68,7 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 	responseData := responses.ColumnResponse{
 		ID:        column.ID,
 		Name:      column.Name,
+		Color:     column.Color,
 		ProjectID: column.ProjectID,
 		CreatedAt: column.CreatedAt.Format(time.RFC3339),
 	}
@@ -97,6 +99,7 @@ func (h *columnHandler) GetColumnHandler(c *gin.Context) {
 	responseData := responses.ColumnWithDetailsResponse{
 		ID:        column.ID,
 		Name:      column.Name,
+		Color:     column.Color,
 		CreatedAt: column.CreatedAt.Format(time.RFC3339),
 		Tasks:     make([]responses.TaskResponse, len(tasks)),
 	}
@@ -128,6 +131,7 @@ func (h *columnHandler) GetColumnsHandler(c *gin.Context) {
 		responseData[i] = responses.ColumnResponse{
 			ID:        column.ID,
 			Name:      column.Name,
+			Color:     column.Color,
 			ProjectID: column.ProjectID,
 			CreatedAt: column.CreatedAt.Format(time.RFC3339),
 		}
@@ -164,7 +168,8 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	}
 
 	column := &domain.Column{
-		ID: id,
+		ID:    id,
+		Color: requestData.Color,
 	}
 
 	if requestData.Name != nil {
@@ -178,8 +183,9 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 	}
 
 	responseData := responses.ColumnUpdateResponse{
-		ID:   column.ID,
-		Name: column.Name,
+		ID:    column.ID,
+		Name:  column.Name,
+		Color: column.Color,
 	}
 
 	h.hub.SendMessage(projectID, ws.BaseResponse{

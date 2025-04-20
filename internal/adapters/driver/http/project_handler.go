@@ -82,6 +82,7 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 
 	project, columns, tasksByColumn, teams, projectMembers, err := h.projectService.GetProjectWithDetails(c.Request.Context(), projectID)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
 		return
 	}
@@ -126,6 +127,7 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 		columnResponses[i] = responses.ColumnWithDetailsResponse{
 			ID:        column.ID,
 			Name:      column.Name,
+			Color:     column.Color,
 			CreatedAt: column.CreatedAt.Format(time.RFC3339),
 			Tasks:     taskResponses,
 		}
