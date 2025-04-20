@@ -185,6 +185,13 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 		return
 	}
 
+	if requestData.ColumnID != nil {
+		h.hub.SendMessage(projectID, ws.BaseResponse{
+			Name: "task_moved",
+			Data: responseData,
+		})
+	}
+
 	h.hub.SendMessage(projectID, ws.BaseResponse{
 		Name: "task_updated",
 		Data: responseData,
