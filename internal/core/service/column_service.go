@@ -28,11 +28,11 @@ func (s *ColumnService) GetColumnByID(ctx context.Context, id string) (*domain.C
 	return s.columnRepo.GetByID(ctx, id)
 }
 
-func (s *ColumnService) GetColumns(ctx context.Context) ([]*domain.Column, error) {
-	return s.columnRepo.GetAll(ctx)
+func (s *ColumnService) GetColumnsByProjectID(ctx context.Context, projectID string) ([]*domain.Column, error) {
+	return s.columnRepo.GetColumnsByProjectID(ctx, projectID)
 }
 
-func (s *ColumnService) GetColumnWithTasks(ctx context.Context, columnID string) (*domain.Column, []*domain.Task, error) {
+func (s *ColumnService) GetColumnWithDetails(ctx context.Context, columnID string) (*domain.Column, []*domain.Task, error) {
 	column, err := s.columnRepo.GetByID(ctx, columnID)
 	if err != nil {
 		return nil, nil, err
@@ -51,12 +51,7 @@ func (s *ColumnService) UpdateColumn(ctx context.Context, column *domain.Column)
 }
 
 func (s *ColumnService) DeleteColumn(ctx context.Context, id string) error {
-	err := s.taskRepo.DeleteTasksByColumnID(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	err = s.columnRepo.Delete(ctx, id)
+	err := s.columnRepo.Delete(ctx, id)
 	if err != nil {
 		return err
 	}

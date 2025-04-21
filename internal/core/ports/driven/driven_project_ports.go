@@ -9,5 +9,5 @@ import (
 type ProjectRepository interface {
 	Save(ctx context.Context, project *domain.Project) error
 	GetByID(ctx context.Context, id string) (*domain.Project, error)
-	GetAll(ctx context.Context) ([]*domain.Project, error)
+	GetUserProjects(ctx context.Context, userID string) ([]*domain.Project, error)
 }

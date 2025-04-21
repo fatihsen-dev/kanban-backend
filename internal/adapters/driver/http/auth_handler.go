@@ -29,7 +29,7 @@ func NewAuthHandler(userService ports.UserService, authMiddleware *middlewares.A
 func (h *authHandler) RegisterAuthRouter(r *gin.Engine) {
 	r.POST("/auth/login", h.LoginHandler)
 	r.POST("/auth/register", h.RegisterHandler)
-	r.GET("/auth/me", h.authMiddleware.Handle, h.AuthUser)
+	r.GET("/auth/me", h.authMiddleware.Handle(false), h.AuthUser)
 }
 
 func (h *authHandler) LoginHandler(c *gin.Context) {
@@ -142,7 +142,7 @@ func (h *authHandler) RegisterHandler(c *gin.Context) {
 func (h *authHandler) AuthUser(c *gin.Context) {
 	userClaims := c.MustGet("user").(*jwt.UserClaims)
 
-	user, err := h.userService.GetUserByID(c.Request.Context(), userClaims.UserID)
+	user, err := h.userService.GetUserByID(c.Request.Context(), userClaims.ID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, datatransfers.ResponseError("Unauthorized"))
 		return

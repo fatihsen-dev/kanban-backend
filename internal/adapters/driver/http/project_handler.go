@@ -15,23 +15,24 @@ import (
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type projectHandler struct {
-	projectService ports.ProjectService
-	authMiddleware *middlewares.AuthnMiddleware
-	hub            *ws.Hub
+	projectService         ports.ProjectService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewProjectHandler(projectService ports.ProjectService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *projectHandler {
-	return &projectHandler{projectService: projectService, authMiddleware: authMiddleware, hub: hub}
+func NewProjectHandler(projectService ports.ProjectService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *projectHandler {
+	return &projectHandler{projectService: projectService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
-	r.POST("/projects", h.authMiddleware.Handle, h.CreateProjectHandler)
-	r.GET("/projects", h.authMiddleware.Handle, h.GetProjectsHandler)
-	r.GET("/projects/:id", h.authMiddleware.Handle, h.GetProjectHandler)
-	r.GET("/projects/:id/columns", h.authMiddleware.Handle, h.GetProjectWithColumnsHandler)
+	r.Use(h.authMiddleware.Handle(false)).POST("/projects", h.CreateProjectHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects", h.GetProjectsHandler)
+	r.Use(h.projectAuthzMiddleware.Handle(middlewares.Admin)).GET("/projects/:project_id", h.GetProjectHandler)
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
@@ -51,13 +52,13 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 
 	project := &domain.Project{
 		Name:    requestData.Name,
-		OwnerID: userClaims.UserID,
+		OwnerID: userClaims.ID,
 	}
 
 	err := h.projectService.CreateProject(c.Request.Context(), project)
 
 	if err != nil {
-		fmt.Println(err)
+		zap.L().Error("Failed to create project", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create project"))
 		return
 	}
@@ -73,31 +74,7 @@ func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
 }
 
 func (h *projectHandler) GetProjectHandler(c *gin.Context) {
-	id := c.Param("id")
-
-	err := validation.ValidateUUID(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
-		return
-	}
-
-	project, err := h.projectService.GetProjectByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
-		return
-	}
-
-	responseData := responses.ProjectResponse{
-		ID:        project.ID,
-		Name:      project.Name,
-		CreatedAt: project.CreatedAt.Format(time.RFC3339),
-	}
-
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project fetched successfully", responseData))
-}
-
-func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
-	projectID := c.Param("id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(projectID)
 	if err != nil {
@@ -107,6 +84,7 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 
 	project, columns, tasksByColumn, teams, projectMembers, err := h.projectService.GetProjectWithDetails(c.Request.Context(), projectID)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
 		return
 	}
@@ -116,7 +94,7 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 		teamResponses[i] = responses.TeamResponse{
 			ID:        team.ID,
 			Name:      team.Name,
-			Role:      team.Role,
+			Role:      string(team.Role),
 			ProjectID: team.ProjectID,
 			CreatedAt: team.CreatedAt.Format(time.RFC3339),
 		}
@@ -126,11 +104,14 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 	for i, member := range projectMembers {
 		memberResponses[i] = responses.ProjectMemberResponse{
 			ID:        member.ID,
-			TeamID:    member.TeamID,
 			UserID:    member.UserID,
-			Role:      member.Role,
+			Role:      string(member.Role),
 			ProjectID: member.ProjectID,
 			CreatedAt: member.CreatedAt.Format(time.RFC3339),
+		}
+
+		if member.TeamID != nil {
+			memberResponses[i].TeamID = *member.TeamID
 		}
 	}
 
@@ -151,6 +132,7 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 		columnResponses[i] = responses.ColumnWithDetailsResponse{
 			ID:        column.ID,
 			Name:      column.Name,
+			Color:     column.Color,
 			CreatedAt: column.CreatedAt.Format(time.RFC3339),
 			Tasks:     taskResponses,
 		}
@@ -170,7 +152,8 @@ func (h *projectHandler) GetProjectWithColumnsHandler(c *gin.Context) {
 }
 
 func (h *projectHandler) GetProjectsHandler(c *gin.Context) {
-	projects, err := h.projectService.GetProjects(c.Request.Context())
+	userClaims := c.MustGet("user").(*jwt.UserClaims)
+	projects, err := h.projectService.GetUserProjects(c.Request.Context(), userClaims.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get projects"))
 		return

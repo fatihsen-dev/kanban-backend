@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
@@ -36,7 +38,7 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*domai
 }
 
 func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, columnIDs []string) ([]*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1)`
+	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1) ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query, pq.Array(columnIDs))
 	if err != nil {
 		return nil, err
@@ -56,7 +58,7 @@ func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, column
 }
 
 func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks`
+	query := `SELECT id, title, column_id, project_id, created_at FROM tasks ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -76,26 +78,46 @@ func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, er
 }
 
 func (r *PostgresTaskRepository) Update(ctx context.Context, task *domain.Task) error {
-	query := `UPDATE tasks SET title = $1, column_id = $2 WHERE id = $3`
-	_, err := r.DB.ExecContext(ctx, query, task.Title, task.ColumnID, task.ID)
-	if err != nil {
-		return err
+	queryBase := "UPDATE tasks SET "
+	queryWhere := " WHERE id = $%d"
+
+	setClauses := []string{}
+	args := []interface{}{}
+	paramIndex := 1
+
+	if task.Title != "" {
+		setClauses = append(setClauses, fmt.Sprintf("title = $%d", paramIndex))
+		args = append(args, task.Title)
+		paramIndex++
 	}
+
+	if task.ColumnID != "" {
+		setClauses = append(setClauses, fmt.Sprintf("column_id = $%d", paramIndex))
+		args = append(args, task.ColumnID)
+		paramIndex++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	querySet := strings.Join(setClauses, ", ")
+
+	args = append(args, task.ID)
+
+	finalQuery := queryBase + querySet + fmt.Sprintf(queryWhere, paramIndex)
+
+	_, err := r.DB.ExecContext(ctx, finalQuery, args...)
+	if err != nil {
+		return fmt.Errorf("task update failed: %w", err)
+	}
+
 	return nil
 }
 
 func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM tasks WHERE id = $1`
 	_, err := r.DB.ExecContext(ctx, query, id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *PostgresTaskRepository) DeleteTasksByColumnID(ctx context.Context, columnID string) error {
-	query := `DELETE FROM tasks WHERE column_id = $1`
-	_, err := r.DB.ExecContext(ctx, query, columnID)
 	if err != nil {
 		return err
 	}

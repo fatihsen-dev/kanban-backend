@@ -8,7 +8,7 @@ import (
 )
 
 type UserClaims struct {
-	UserID  string `json:"user_id"`
+	ID      string `json:"id"`
 	Name    string `json:"name"`
 	Email   string `json:"email"`
 	IsAdmin bool   `json:"is_admin"`
@@ -19,7 +19,7 @@ func GenerateToken(userID string, name string, email string, isAdmin bool) (stri
 	appConfig := config.Read()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, UserClaims{
-		UserID:  userID,
+		ID:      userID,
 		Name:    name,
 		Email:   email,
 		IsAdmin: isAdmin,

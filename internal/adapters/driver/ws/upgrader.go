@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/fatihsen-dev/kanban-backend/config"
+	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -27,6 +29,24 @@ var upgrader = websocket.Upgrader{
 
 func ServeWs(hub *Hub, c *gin.Context) {
 	groupID := c.Param("project_id")
+	token := c.Query("token")
+
+	if token == "" {
+		zap.L().Error("No token provided")
+		return
+	}
+
+	user, err := jwt.VerifyToken(token)
+	if err != nil {
+		zap.L().Error("Failed to validate token", zap.Error(err))
+		return
+	}
+
+	_, err = middlewares.CheckMemberAccess(user.ID, groupID, c.Request.Context(), hub.projectMemberService)
+	if err != nil {
+		zap.L().Error("Failed to check member access", zap.Error(err))
+		return
+	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

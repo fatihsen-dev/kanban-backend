@@ -7,6 +7,6 @@ type CreateTeamRequest struct {
 }
 
 type UpdateTeamRequest struct {
-	Role string `json:"role,omitempty" validate:"oneof=admin write read"`
-	Name string `json:"name,omitempty" validate:"min=3,max=26"`
+	Role *string `json:"role,omitempty" validate:"oneof=admin write read"`
+	Name *string `json:"name,omitempty" validate:"min=3,max=26"`
 }

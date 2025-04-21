@@ -27,15 +27,19 @@ func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.A
 }
 
 func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
-	r.POST("/tasks", h.authMiddleware.Handle, h.CreateTaskHandler)
-	r.GET("/tasks", h.authMiddleware.Handle, h.GetTasksHandler)
-	r.GET("/tasks/:id", h.authMiddleware.Handle, h.GetTaskHandler)
-	r.PUT("/tasks/:id", h.authMiddleware.Handle, h.UpdateTaskHandler)
-	r.DELETE("/tasks/:id", h.authMiddleware.Handle, h.DeleteTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/tasks", h.CreateTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/tasks", h.GetTasksHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/tasks/:task_id", h.GetTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/tasks/:task_id", h.UpdateTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/tasks/:task_id", h.DeleteTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
+	projectID := c.Param("project_id")
+
 	var requestData requests.TaskCreateRequest
+
+	requestData.ProjectID = projectID
 
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid request data"))
@@ -84,7 +88,7 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 }
 
 func (h *taskHandler) GetTaskHandler(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("task_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
@@ -94,7 +98,7 @@ func (h *taskHandler) GetTaskHandler(c *gin.Context) {
 
 	task, err := h.taskService.GetTaskByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get task"))
+		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Task not found"))
 		return
 	}
 
@@ -131,8 +135,8 @@ func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 }
 
 func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
-	id := c.Param("id")
-	projectID := c.Query("project_id")
+	id := c.Param("task_id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(id)
 	if err != nil {
@@ -165,13 +169,13 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 		ID: task.ID,
 	}
 
-	if requestData.Title != "" {
-		task.Title = requestData.Title
+	if requestData.Title != nil {
+		task.Title = *requestData.Title
 		responseData.Title = task.Title
 	}
 
-	if requestData.ColumnID != "" {
-		task.ColumnID = requestData.ColumnID
+	if requestData.ColumnID != nil {
+		task.ColumnID = *requestData.ColumnID
 		responseData.ColumnID = task.ColumnID
 	}
 
@@ -179,6 +183,13 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to update task"))
 		return
+	}
+
+	if requestData.ColumnID != nil {
+		h.hub.SendMessage(projectID, ws.BaseResponse{
+			Name: "task_moved",
+			Data: responseData,
+		})
 	}
 
 	h.hub.SendMessage(projectID, ws.BaseResponse{
@@ -190,8 +201,8 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 }
 
 func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
-	id := c.Param("id")
-	projectID := c.Query("project_id")
+	id := c.Param("task_id")
+	projectID := c.Param("project_id")
 	err := validation.ValidateUUID(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid task ID"))

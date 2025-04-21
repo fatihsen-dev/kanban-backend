@@ -26,13 +26,11 @@ func NewTeamHandler(teamService ports.TeamService, authMiddleware *middlewares.A
 }
 
 func (h *teamHandler) RegisterTeamRouter(r *gin.Engine) {
-	r.POST("/teams", h.authMiddleware.Handle, h.CreateTeamHandler)
-	r.GET("/teams", h.authMiddleware.Handle, h.GetTeamsHandler)
-	r.GET("/teams/:id", h.authMiddleware.Handle, h.GetTeamHandler)
-	r.PUT("/teams/:id", h.authMiddleware.Handle, h.UpdateTeamHandler)
-	r.DELETE("/teams/:id", h.authMiddleware.Handle, h.DeleteTeamHandler)
-	r.POST("/teams/:id/members", h.authMiddleware.Handle, h.CreateTeamMemberHandler)
-	r.DELETE("/teams/:id/members/:member_id", h.authMiddleware.Handle, h.DeleteTeamMemberHandler)
+	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/teams", h.CreateTeamHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/teams", h.GetTeamsHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/teams/:team_id", h.GetTeamHandler)
+	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/teams/:team_id", h.UpdateTeamHandler)
+	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/teams/:team_id", h.DeleteTeamHandler)
 }
 
 func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
@@ -42,6 +40,7 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 		return
 	}
 
+	requestData.ProjectID = c.Param("project_id")
 	if err := validation.Validate(requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
@@ -49,6 +48,7 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 
 	team := &domain.Team{
 		Name:      requestData.Name,
+		Role:      domain.TeamRole(requestData.Role),
 		ProjectID: requestData.ProjectID,
 	}
 
@@ -61,6 +61,7 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 	responseData := responses.TeamResponse{
 		ID:        team.ID,
 		Name:      team.Name,
+		Role:      string(team.Role),
 		ProjectID: team.ProjectID,
 		CreatedAt: team.CreatedAt.Format(time.RFC3339),
 	}
@@ -74,7 +75,7 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 }
 
 func (h *teamHandler) GetTeamsHandler(c *gin.Context) {
-	projectID := c.Query("project_id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(projectID)
 	if err != nil {
@@ -102,44 +103,34 @@ func (h *teamHandler) GetTeamsHandler(c *gin.Context) {
 }
 
 func (h *teamHandler) GetTeamHandler(c *gin.Context) {
-	id := c.Param("id")
+	teamID := c.Param("team_id")
 
-	err := validation.ValidateUUID(id)
+	err := validation.ValidateUUID(teamID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid team ID"))
 		return
 	}
 
-	team, teamMembers, err := h.teamService.GetTeamWithMembersByID(c.Request.Context(), id)
+	team, err := h.teamService.GetTeamByID(c.Request.Context(), teamID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to get team"))
 		return
 	}
 
-	responseData := responses.TeamWithMembersResponse{
+	responseData := responses.TeamResponse{
 		ID:        team.ID,
 		Name:      team.Name,
 		ProjectID: team.ProjectID,
 		CreatedAt: team.CreatedAt.Format(time.RFC3339),
-		Members:   make([]responses.ProjectMemberResponse, len(teamMembers)),
-	}
-
-	for i, teamMember := range teamMembers {
-		responseData.Members[i] = responses.ProjectMemberResponse{
-			ID:        teamMember.ID,
-			TeamID:    teamMember.TeamID,
-			UserID:    teamMember.UserID,
-			CreatedAt: teamMember.CreatedAt.Format(time.RFC3339),
-		}
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Team fetched successfully", responseData))
 }
 
 func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
-	id := c.Param("id")
+	teamID := c.Param("team_id")
 
-	err := validation.ValidateUUID(id)
+	err := validation.ValidateUUID(teamID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid team ID"))
 		return
@@ -157,9 +148,15 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	}
 
 	team := &domain.Team{
-		ID:   id,
-		Name: requestData.Name,
-		Role: requestData.Role,
+		ID: teamID,
+	}
+
+	if requestData.Name != nil {
+		team.Name = *requestData.Name
+	}
+
+	if requestData.Role != nil {
+		team.Role = domain.TeamRole(*requestData.Role)
 	}
 
 	err = h.teamService.UpdateTeam(c.Request.Context(), team)
@@ -171,7 +168,7 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	responseData := responses.UpdateTeamResponse{
 		ID:        team.ID,
 		Name:      team.Name,
-		Role:      team.Role,
+		Role:      string(team.Role),
 		ProjectID: team.ProjectID,
 	}
 
@@ -184,10 +181,10 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 }
 
 func (h *teamHandler) DeleteTeamHandler(c *gin.Context) {
-	id := c.Param("id")
-	projectID := c.Query("project_id")
+	teamID := c.Param("team_id")
+	projectID := c.Param("project_id")
 
-	err := validation.ValidateUUID(id)
+	err := validation.ValidateUUID(teamID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid team ID"))
 		return
@@ -199,14 +196,14 @@ func (h *teamHandler) DeleteTeamHandler(c *gin.Context) {
 		return
 	}
 
-	err = h.teamService.DeleteTeamByID(c.Request.Context(), id)
+	err = h.teamService.DeleteTeamByID(c.Request.Context(), teamID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete team"))
 		return
 	}
 
 	responseData := responses.DeleteTeamResponse{
-		ID: id,
+		ID: teamID,
 	}
 
 	h.hub.SendMessage(projectID, ws.BaseResponse{
@@ -215,88 +212,4 @@ func (h *teamHandler) DeleteTeamHandler(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Team deleted successfully", responseData))
-}
-
-func (h *teamHandler) CreateTeamMemberHandler(c *gin.Context) {
-	id := c.Param("id")
-	projectID := c.Query("project_id")
-
-	var requestData requests.CreateProjectMemberRequest
-
-	requestData.TeamID = id
-	requestData.ProjectID = projectID
-
-	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := validation.Validate(requestData); err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
-		return
-	}
-
-	projectMember := &domain.ProjectMember{
-		TeamID:    id,
-		UserID:    requestData.UserID,
-		ProjectID: projectID,
-	}
-
-	err := h.teamService.CreateTeamMember(c.Request.Context(), projectMember)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to add team member"))
-		return
-	}
-
-	responseData := responses.ProjectMemberResponse{
-		ID:        projectMember.ID,
-		TeamID:    projectMember.TeamID,
-		UserID:    projectMember.UserID,
-		CreatedAt: projectMember.CreatedAt.Format(time.RFC3339),
-	}
-
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "team_member_created",
-		Data: responseData,
-	})
-
-	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Team member added successfully", responseData))
-}
-
-func (h *teamHandler) DeleteTeamMemberHandler(c *gin.Context) {
-	id := c.Param("id")
-	memberID := c.Param("member_id")
-	projectID := c.Query("project_id")
-
-	var requestData requests.DeleteProjectMemberRequest
-	requestData.TeamID = id
-	requestData.MemberID = memberID
-	requestData.ProjectID = projectID
-
-	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := validation.Validate(requestData); err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
-		return
-	}
-
-	err := h.teamService.DeleteTeamMemberByID(c.Request.Context(), requestData.TeamID, requestData.MemberID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete team member"))
-		return
-	}
-
-	responseData := responses.DeleteProjectMemberResponse{
-		ID: requestData.MemberID,
-	}
-
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "team_member_deleted",
-		Data: responseData,
-	})
-
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Team member deleted successfully", responseData))
 }

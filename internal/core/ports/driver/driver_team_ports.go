@@ -8,10 +8,8 @@ import (
 
 type TeamService interface {
 	CreateTeam(ctx context.Context, team *domain.Team) error
-	GetTeamWithMembersByID(ctx context.Context, id string) (*domain.Team, []*domain.ProjectMember, error)
 	GetTeamsByProjectID(ctx context.Context, projectID string) ([]*domain.Team, error)
 	UpdateTeam(ctx context.Context, team *domain.Team) error
 	DeleteTeamByID(ctx context.Context, id string) error
-	CreateTeamMember(ctx context.Context, teamMember *domain.ProjectMember) error
-	DeleteTeamMemberByID(ctx context.Context, teamID string, memberID string) error
+	GetTeamByID(ctx context.Context, id string) (*domain.Team, error)
 }

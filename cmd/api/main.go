@@ -33,20 +33,37 @@ func main() {
 	}))
 	router.SetTrustedProxies(nil)
 
+	// repositories
 	postgresDB := db.NewPostgresRepository(appConfig.DBUrl)
+	userRepo := db.NewPostgresUserRepo(postgresDB)
+	projectRepo := db.NewPostgresProjectRepo(postgresDB)
+	columnRepo := db.NewPostgresColumnRepo(postgresDB)
+	taskRepo := db.NewPostgresTaskRepo(postgresDB)
+	teamRepo := db.NewPostgresTeamRepo(postgresDB)
+	projectMemberRepo := db.NewPostgresProjectMemberRepo(postgresDB)
 
-	authnMiddleware := middlewares.NewAuthnMiddleware()
+	// services
+	userService := service.NewUserService(userRepo)
+	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo, teamRepo, projectMemberRepo)
+	columnService := service.NewColumnService(columnRepo, taskRepo)
+	taskService := service.NewTaskService(taskRepo)
+	projectMemberService := service.NewProjectMemberService(projectMemberRepo, userRepo)
+	teamService := service.NewTeamService(teamRepo)
 
-	hub := ws.NewHub()
+	hub := ws.NewHub(projectMemberService)
 	go hub.Run()
 
 	router.GET("/ws/:project_id", func(c *gin.Context) {
 		ws.ServeWs(hub, c)
 	})
 
+	// middlewares
+	authnMiddleware := middlewares.NewAuthnMiddleware()
+	projectAuthzMiddleware := middlewares.NewProjectAuthzMiddleware(projectMemberService, teamService)
+
+	fmt.Println("projectAuthzMiddleware", projectAuthzMiddleware)
+
 	// /users/* routes
-	userRepo := db.NewPostgresUserRepo(postgresDB)
-	userService := service.NewUserService(userRepo)
 	userHandler := httphandler.NewUserHandler(userService, authnMiddleware)
 	userHandler.RegisterUserRouter(router)
 
@@ -54,24 +71,19 @@ func main() {
 	authHandler := httphandler.NewAuthHandler(userService, authnMiddleware)
 	authHandler.RegisterAuthRouter(router)
 
-	projectRepo := db.NewPostgresProjectRepo(postgresDB)
-	columnRepo := db.NewPostgresColumnRepo(postgresDB)
-	taskRepo := db.NewPostgresTaskRepo(postgresDB)
-	teamRepo := db.NewPostgresTeamRepo(postgresDB)
-	projectMemberRepo := db.NewPostgresProjectMemberRepo(postgresDB)
-
 	// /projects/* routes
-	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo, teamRepo, projectMemberRepo)
-	projectHandler := httphandler.NewProjectHandler(projectService, authnMiddleware, hub)
+	projectHandler := httphandler.NewProjectHandler(projectService, authnMiddleware, projectAuthzMiddleware, hub)
 	projectHandler.RegisterProjectRouter(router)
 
-	// /columns/* routes
-	columnService := service.NewColumnService(columnRepo, taskRepo)
+	// /projects/:project_id/teams/* routes
+	teamHandler := httphandler.NewTeamHandler(teamService, authnMiddleware, hub)
+	teamHandler.RegisterTeamRouter(router)
+
+	// /projects/:project_id/columns/* routes
 	columnHandler := httphandler.NewColumnHandler(columnService, authnMiddleware, hub)
 	columnHandler.RegisterColumnRouter(router)
 
-	// /tasks/* routes
-	taskService := service.NewTaskService(taskRepo)
+	// /projects/:project_id/tasks/* routes
 	taskHandler := httphandler.NewTaskHandler(taskService, authnMiddleware, hub)
 	taskHandler.RegisterTaskRouter(router)
 
