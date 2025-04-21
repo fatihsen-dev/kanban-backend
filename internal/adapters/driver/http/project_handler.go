@@ -19,19 +19,20 @@ import (
 )
 
 type projectHandler struct {
-	projectService ports.ProjectService
-	authMiddleware *middlewares.AuthnMiddleware
-	hub            *ws.Hub
+	projectService         ports.ProjectService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewProjectHandler(projectService ports.ProjectService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *projectHandler {
-	return &projectHandler{projectService: projectService, authMiddleware: authMiddleware, hub: hub}
+func NewProjectHandler(projectService ports.ProjectService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *projectHandler {
+	return &projectHandler{projectService: projectService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
-	r.POST("/projects", h.authMiddleware.Handle, h.CreateProjectHandler)
-	r.GET("/projects", h.authMiddleware.Handle, h.GetProjectsHandler)
-	r.GET("/projects/:project_id", h.authMiddleware.Handle, h.GetProjectHandler)
+	r.Use(h.authMiddleware.Handle(false)).POST("/projects", h.CreateProjectHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects", h.GetProjectsHandler)
+	r.Use(h.projectAuthzMiddleware.Handle(middlewares.Admin)).GET("/projects/:project_id", h.GetProjectHandler)
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
@@ -93,7 +94,7 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 		teamResponses[i] = responses.TeamResponse{
 			ID:        team.ID,
 			Name:      team.Name,
-			Role:      team.Role,
+			Role:      string(team.Role),
 			ProjectID: team.ProjectID,
 			CreatedAt: team.CreatedAt.Format(time.RFC3339),
 		}
@@ -104,7 +105,7 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 		memberResponses[i] = responses.ProjectMemberResponse{
 			ID:        member.ID,
 			UserID:    member.UserID,
-			Role:      member.Role,
+			Role:      string(member.Role),
 			ProjectID: member.ProjectID,
 			CreatedAt: member.CreatedAt.Format(time.RFC3339),
 		}

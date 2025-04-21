@@ -38,7 +38,7 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*domai
 }
 
 func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, columnIDs []string) ([]*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1)`
+	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1) ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query, pq.Array(columnIDs))
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, column
 }
 
 func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks`
+	query := `SELECT id, title, column_id, project_id, created_at FROM tasks ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -118,15 +118,6 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *domain.Task) 
 func (r *PostgresTaskRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM tasks WHERE id = $1`
 	_, err := r.DB.ExecContext(ctx, query, id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *PostgresTaskRepository) DeleteTasksByColumnID(ctx context.Context, columnID string) error {
-	query := `DELETE FROM tasks WHERE column_id = $1`
-	_, err := r.DB.ExecContext(ctx, query, columnID)
 	if err != nil {
 		return err
 	}

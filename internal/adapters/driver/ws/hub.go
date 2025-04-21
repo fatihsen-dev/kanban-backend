@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 )
 
 type BroadcastMessage struct {
@@ -12,20 +14,22 @@ type BroadcastMessage struct {
 }
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan BroadcastMessage
-	register   chan *Client
-	unregister chan *Client
-	ctx        context.Context
+	clients              map[*Client]bool
+	broadcast            chan BroadcastMessage
+	register             chan *Client
+	unregister           chan *Client
+	ctx                  context.Context
+	projectMemberService ports.ProjectMemberService
 }
 
-func NewHub() *Hub {
+func NewHub(projectMemberService ports.ProjectMemberService) *Hub {
 	return &Hub{
-		broadcast:  make(chan BroadcastMessage),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
-		ctx:        context.Background(),
+		broadcast:            make(chan BroadcastMessage),
+		register:             make(chan *Client),
+		unregister:           make(chan *Client),
+		clients:              make(map[*Client]bool),
+		ctx:                  context.Background(),
+		projectMemberService: projectMemberService,
 	}
 }
 

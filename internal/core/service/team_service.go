@@ -30,3 +30,7 @@ func (s *TeamService) GetTeamsByProjectID(ctx context.Context, projectID string)
 func (s *TeamService) DeleteTeamByID(ctx context.Context, id string) error {
 	return s.teamRepo.DeleteByID(ctx, id)
 }
+
+func (s *TeamService) GetTeamByID(ctx context.Context, id string) (*domain.Team, error) {
+	return s.teamRepo.GetByID(ctx, id)
+}

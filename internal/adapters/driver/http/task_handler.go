@@ -27,11 +27,11 @@ func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.A
 }
 
 func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
-	r.POST("/projects/:project_id/tasks", h.authMiddleware.Handle, h.CreateTaskHandler)
-	r.GET("/projects/:project_id/tasks", h.authMiddleware.Handle, h.GetTasksHandler)
-	r.GET("/projects/:project_id/tasks/:task_id", h.authMiddleware.Handle, h.GetTaskHandler)
-	r.PUT("/projects/:project_id/tasks/:task_id", h.authMiddleware.Handle, h.UpdateTaskHandler)
-	r.DELETE("/projects/:project_id/tasks/:task_id", h.authMiddleware.Handle, h.DeleteTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/tasks", h.CreateTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/tasks", h.GetTasksHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/tasks/:task_id", h.GetTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/tasks/:task_id", h.UpdateTaskHandler)
+	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/tasks/:task_id", h.DeleteTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {

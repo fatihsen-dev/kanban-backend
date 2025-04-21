@@ -17,35 +17,38 @@ func NewAuthnMiddleware() *AuthnMiddleware {
 	return (&AuthnMiddleware{})
 }
 
-func (m *AuthnMiddleware) Handle(ctx *gin.Context) {
-	authHeader := ctx.GetHeader("Authorization")
-	if authHeader == "" {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("missing authorization header"))
-		return
-	}
+func (m *AuthnMiddleware) Handle(isAdmin bool) gin.HandlerFunc {
+	m.isAdmin = isAdmin
+	return func(ctx *gin.Context) {
+		authHeader := ctx.GetHeader("Authorization")
+		if authHeader == "" {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("missing authorization header"))
+			return
+		}
 
-	headerParts := strings.Split(authHeader, " ")
-	if len(headerParts) != 2 {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("invalid header format"))
-		return
-	}
+		headerParts := strings.Split(authHeader, " ")
+		if len(headerParts) != 2 {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("invalid header format"))
+			return
+		}
 
-	if headerParts[0] != "Bearer" {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("token must content bearer"))
-		return
-	}
+		if headerParts[0] != "Bearer" {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("token must content bearer"))
+			return
+		}
 
-	user, err := jwt.VerifyToken(headerParts[1])
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("invalid token"))
-		return
-	}
+		user, err := jwt.VerifyToken(headerParts[1])
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("invalid token"))
+			return
+		}
 
-	if user.IsAdmin != m.isAdmin && !user.IsAdmin {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("you don't have access for this action"))
-		return
-	}
+		if user.IsAdmin != m.isAdmin && !user.IsAdmin {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, datatransfers.ResponseAbort("you don't have access for this action"))
+			return
+		}
 
-	ctx.Set("user", user)
-	ctx.Next()
+		ctx.Set("user", user)
+		ctx.Next()
+	}
 }

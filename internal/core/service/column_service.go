@@ -51,12 +51,7 @@ func (s *ColumnService) UpdateColumn(ctx context.Context, column *domain.Column)
 }
 
 func (s *ColumnService) DeleteColumn(ctx context.Context, id string) error {
-	err := s.taskRepo.DeleteTasksByColumnID(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	err = s.columnRepo.Delete(ctx, id)
+	err := s.columnRepo.Delete(ctx, id)
 	if err != nil {
 		return err
 	}

@@ -1,106 +1,81 @@
 package middlewares
 
 import (
-	"errors"
-	"fmt"
+	"context"
 	"net/http"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
-	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
+	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
 )
 
-type MemberType string
+type AccessType string
 
 const (
-	Admin MemberType = "admin"
-	Owner MemberType = "owner"
+	Admin  AccessType = "admin"
+	Owner  AccessType = "owner"
+	Member AccessType = "member"
 )
 
-type AuthzMiddleware struct {
+type ProjectAuthzMiddleware struct {
 	projectMemberService ports.ProjectMemberService
 	teamService          ports.TeamService
 }
 
-func NewAuthzMiddleware(projectMemberService ports.ProjectMemberService, teamService ports.TeamService) *AuthzMiddleware {
-	return (&AuthzMiddleware{
+func NewProjectAuthzMiddleware(projectMemberService ports.ProjectMemberService, teamService ports.TeamService) *ProjectAuthzMiddleware {
+	return &ProjectAuthzMiddleware{
 		projectMemberService: projectMemberService,
 		teamService:          teamService,
-	})
+	}
 }
 
-func (m *AuthzMiddleware) Handle(ctx *gin.Context, projectIdSource string, fieldName string, memberType MemberType) {
-	user := ctx.MustGet("user").(*jwt.UserClaims)
-	projectID, err := m.getProjectID(ctx, projectIdSource, fieldName)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, datatransfers.ResponseAbort(err.Error()))
-		return
-	}
+func (m *ProjectAuthzMiddleware) Handle(accessType AccessType) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		user := ctx.MustGet("user").(*jwt.UserClaims)
+		projectID := ctx.Param("project_id")
 
-	fmt.Println("memberType", projectID, memberType)
+		projectMember, err := CheckMemberAccess(user.ID, projectID, ctx.Request.Context(), m.projectMemberService)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not a member of this project"))
+			return
+		}
 
-	if user.IsAdmin {
+		if !CheckMemberRole(projectMember, accessType, ctx) {
+			ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
+			return
+		}
+
 		ctx.Next()
-		return
 	}
-
-	ctx.Next()
 }
 
-func (m *AuthzMiddleware) getProjectID(ctx *gin.Context, projectIdSource string, fieldName string) (string, error) {
-	projectID := ""
-
-	switch projectIdSource {
-	case "query":
-		switch fieldName {
-		case "project_id":
-			projectID = ctx.Query(fieldName)
-		case "id":
-			projectID = ctx.Query(fieldName)
-		default:
-			return "", errors.New("invalid project id")
-		}
-	case "param":
-		switch fieldName {
-		case "project_id":
-			projectID = ctx.Param(fieldName)
-		case "id":
-			projectID = ctx.Param(fieldName)
-		default:
-			return "", errors.New("invalid project id")
-		}
-	case "body":
-		switch fieldName {
-		case "project_id":
-			var requestData struct {
-				ProjectID string `json:"project_id"`
-			}
-			if err := ctx.ShouldBindJSON(&requestData); err != nil {
-				return "", errors.New("invalid project id")
-			}
-			projectID = requestData.ProjectID
-		case "id":
-			var requestData struct {
-				ID string `json:"id"`
-			}
-			if err := ctx.ShouldBindJSON(&requestData); err != nil {
-				return "", errors.New("invalid project id")
-			}
-			projectID = requestData.ID
-		default:
-			return "", errors.New("invalid project id")
-		}
+func CheckMemberAccess(userID string, projectID string, ctx context.Context, projectMemberService ports.ProjectMemberService) (domain.ProjectMember, error) {
+	result, err := projectMemberService.GetByUserIDAndProjectID(ctx, userID, projectID)
+	if err != nil {
+		return domain.ProjectMember{}, err
 	}
 
-	if projectID == "" {
-		return "", errors.New("project id is required")
+	return *result, nil
+}
+
+func CheckMemberRole(projectMember domain.ProjectMember, accessType AccessType, ctx *gin.Context) bool {
+	if projectMember.Role == domain.ProjectMemberRole(Owner) {
+		return true
 	}
 
-	if err := validation.ValidateUUID(projectID); err != nil {
-		return "", errors.New("invalid project id")
+	if projectMember.Role == domain.ProjectAdminRole && accessType == Admin {
+		return true
 	}
 
-	return projectID, nil
+	if accessType == Member && (projectMember.Role == domain.ProjectReadRole && ctx.Request.Method == "GET") {
+		return true
+	}
+
+	if accessType == Member && (projectMember.Role == domain.ProjectWriteRole && (ctx.Request.Method == "POST" || ctx.Request.Method == "PUT" || ctx.Request.Method == "PATCH")) {
+		return true
+	}
+
+	return false
 }

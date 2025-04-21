@@ -11,7 +11,6 @@ type TaskRepository interface {
 	GetByID(ctx context.Context, id string) (*domain.Task, error)
 	GetAll(ctx context.Context) ([]*domain.Task, error)
 	GetTasksByColumnIDs(ctx context.Context, columnIDs []string) ([]*domain.Task, error)
-	DeleteTasksByColumnID(ctx context.Context, columnID string) error
 	Update(ctx context.Context, task *domain.Task) error
 	Delete(ctx context.Context, id string) error
 }

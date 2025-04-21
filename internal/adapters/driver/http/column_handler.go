@@ -27,11 +27,11 @@ func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlew
 }
 
 func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
-	r.POST("/projects/:project_id/columns", h.authMiddleware.Handle, h.CreateColumnHandler)
-	r.GET("/projects/:project_id/columns", h.authMiddleware.Handle, h.GetColumnsHandler)
-	r.GET("/projects/:project_id/columns/:column_id", h.authMiddleware.Handle, h.GetColumnHandler)
-	r.PUT("/projects/:project_id/columns/:column_id", h.authMiddleware.Handle, h.UpdateColumnHandler)
-	r.DELETE("/projects/:project_id/columns/:column_id", h.authMiddleware.Handle, h.DeleteColumnHandler)
+	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/columns", h.CreateColumnHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/columns", h.GetColumnsHandler)
+	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/columns/:column_id", h.GetColumnHandler)
+	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/columns/:column_id", h.UpdateColumnHandler)
+	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/columns/:column_id", h.DeleteColumnHandler)
 }
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {

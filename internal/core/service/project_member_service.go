@@ -27,3 +27,7 @@ func (s *ProjectMemberService) DeleteProjectMemberByID(ctx context.Context, id s
 func (s *ProjectMemberService) GetProjectMembersByProjectID(ctx context.Context, projectID string) ([]*domain.ProjectMember, error) {
 	return s.projectMemberRepo.GetProjectMembersByProjectID(ctx, projectID)
 }
+
+func (s *ProjectMemberService) GetByUserIDAndProjectID(ctx context.Context, userID, projectID string) (*domain.ProjectMember, error) {
+	return s.projectMemberRepo.GetByUserIDAndProjectID(ctx, userID, projectID)
+}

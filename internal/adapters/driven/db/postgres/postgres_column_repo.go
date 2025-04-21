@@ -37,7 +37,7 @@ func (r *PostgresColumnRepository) GetByID(ctx context.Context, id string) (*dom
 }
 
 func (r *PostgresColumnRepository) GetColumnsByProjectID(ctx context.Context, projectID string) ([]*domain.Column, error) {
-	query := `SELECT id, name, color, project_id, created_at FROM columns WHERE project_id = $1`
+	query := `SELECT id, name, color, project_id, created_at FROM columns WHERE project_id = $1 ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query, projectID)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (r *PostgresColumnRepository) GetColumnsByProjectID(ctx context.Context, pr
 }
 
 func (r *PostgresColumnRepository) GetAll(ctx context.Context) ([]*domain.Column, error) {
-	query := `SELECT id, name, color, project_id, created_at FROM columns`
+	query := `SELECT id, name, color, project_id, created_at FROM columns ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

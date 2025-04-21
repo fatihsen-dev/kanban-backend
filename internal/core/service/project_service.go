@@ -35,7 +35,29 @@ func (s *ProjectService) CreateProject(ctx context.Context, project *domain.Proj
 	projectMember := &domain.ProjectMember{
 		ProjectID: project.ID,
 		UserID:    project.OwnerID,
-		Role:      "admin",
+		Role:      domain.ProjectAdminRole,
+	}
+
+	columns := []*domain.Column{
+		{
+			ProjectID: project.ID,
+			Name:      "To Do",
+		},
+		{
+			ProjectID: project.ID,
+			Name:      "In Progress",
+		},
+		{
+			ProjectID: project.ID,
+			Name:      "Done",
+		},
+	}
+
+	for _, column := range columns {
+		err = s.columnRepo.Save(ctx, column)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = s.projectMemberRepo.Save(ctx, projectMember)

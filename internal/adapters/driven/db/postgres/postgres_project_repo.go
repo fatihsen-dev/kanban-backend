@@ -36,7 +36,7 @@ func (r *PostgresProjectRepository) GetByID(ctx context.Context, id string) (*do
 }
 
 func (r *PostgresProjectRepository) GetUserProjects(ctx context.Context, userID string) ([]*domain.Project, error) {
-	query := `SELECT id, name, owner_id, created_at FROM projects WHERE owner_id = $1`
+	query := `SELECT id, name, owner_id, created_at FROM projects WHERE owner_id = $1 ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
