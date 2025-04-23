@@ -42,7 +42,7 @@ func ServeWs(hub *Hub, c *gin.Context) {
 		return
 	}
 
-	_, err = middlewares.CheckMemberAccess(user.ID, groupID, c.Request.Context(), hub.projectMemberService)
+	_, err = middlewares.CheckAccess(user.ID, groupID, c.Request.Context(), hub.projectMemberService)
 	if err != nil {
 		zap.L().Error("Failed to check member access", zap.Error(err))
 		return

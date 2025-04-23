@@ -48,7 +48,7 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 
 	team := &domain.Team{
 		Name:      requestData.Name,
-		Role:      domain.TeamRole(requestData.Role),
+		Role:      domain.AccessRole(requestData.Role),
 		ProjectID: requestData.ProjectID,
 	}
 
@@ -156,7 +156,7 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	}
 
 	if requestData.Role != nil {
-		team.Role = domain.TeamRole(*requestData.Role)
+		team.Role = domain.AccessRole(*requestData.Role)
 	}
 
 	err = h.teamService.UpdateTeam(c.Request.Context(), team)

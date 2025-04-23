@@ -35,7 +35,7 @@ func (s *ProjectService) CreateProject(ctx context.Context, project *domain.Proj
 	projectMember := &domain.ProjectMember{
 		ProjectID: project.ID,
 		UserID:    project.OwnerID,
-		Role:      domain.ProjectAdminRole,
+		Role:      domain.AccessAdminRole,
 	}
 
 	columns := []*domain.Column{
