@@ -46,6 +46,17 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 		return
 	}
 
+	projectMember, ok := c.MustGet("project_member").(domain.ProjectMember)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Project member not found"))
+		return
+	}
+
+	if projectMember.Role != domain.AccessOwnerRole && requestData.Role != string(domain.AccessAdminRole) {
+		c.JSON(http.StatusForbidden, datatransfers.ResponseError("You are not authorized to create a team"))
+		return
+	}
+
 	team := &domain.Team{
 		Name:      requestData.Name,
 		Role:      domain.AccessRole(requestData.Role),

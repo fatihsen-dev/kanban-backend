@@ -42,6 +42,8 @@ func (m *ProjectAuthzMiddleware) Handle(memberType MemberType) gin.HandlerFunc {
 			return
 		}
 
+		ctx.Set("project_member", projectMember)
+
 		if !CheckRole(projectMember.Role, memberType, ctx) {
 
 			if projectMember.TeamID != nil {
@@ -50,6 +52,8 @@ func (m *ProjectAuthzMiddleware) Handle(memberType MemberType) gin.HandlerFunc {
 					ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
 					return
 				}
+
+				ctx.Set("team", team)
 
 				if !CheckRole(team.Role, memberType, ctx) {
 					ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
