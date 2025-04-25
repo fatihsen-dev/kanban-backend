@@ -11,12 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AccessType string
+type MemberType string
 
 const (
-	Admin  AccessType = "admin"
-	Owner  AccessType = "owner"
-	Member AccessType = "member"
+	Admin  MemberType = "admin"
+	Owner  MemberType = "owner"
+	Member MemberType = "member"
 )
 
 type ProjectAuthzMiddleware struct {
@@ -31,19 +31,38 @@ func NewProjectAuthzMiddleware(projectMemberService ports.ProjectMemberService, 
 	}
 }
 
-func (m *ProjectAuthzMiddleware) Handle(accessType AccessType) gin.HandlerFunc {
+func (m *ProjectAuthzMiddleware) Handle(memberType MemberType) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		user := ctx.MustGet("user").(*jwt.UserClaims)
 		projectID := ctx.Param("project_id")
 
-		projectMember, err := CheckMemberAccess(user.ID, projectID, ctx.Request.Context(), m.projectMemberService)
+		projectMember, err := CheckAccess(user.ID, projectID, ctx.Request.Context(), m.projectMemberService)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not a member of this project"))
 			return
 		}
 
-		if !CheckMemberRole(projectMember, accessType, ctx) {
+		ctx.Set("project_member", projectMember)
+
+		if !CheckRole(projectMember.Role, memberType, ctx) {
+
+			if projectMember.TeamID != nil {
+				team, err := m.teamService.GetTeamByID(ctx.Request.Context(), *projectMember.TeamID)
+				if err != nil {
+					ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
+					return
+				}
+
+				ctx.Set("team", team)
+
+				if !CheckRole(team.Role, memberType, ctx) {
+					ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
+					return
+				}
+			}
+
 			ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
+
 			return
 		}
 
@@ -51,7 +70,7 @@ func (m *ProjectAuthzMiddleware) Handle(accessType AccessType) gin.HandlerFunc {
 	}
 }
 
-func CheckMemberAccess(userID string, projectID string, ctx context.Context, projectMemberService ports.ProjectMemberService) (domain.ProjectMember, error) {
+func CheckAccess(userID string, projectID string, ctx context.Context, projectMemberService ports.ProjectMemberService) (domain.ProjectMember, error) {
 	result, err := projectMemberService.GetByUserIDAndProjectID(ctx, userID, projectID)
 	if err != nil {
 		return domain.ProjectMember{}, err
@@ -60,20 +79,20 @@ func CheckMemberAccess(userID string, projectID string, ctx context.Context, pro
 	return *result, nil
 }
 
-func CheckMemberRole(projectMember domain.ProjectMember, accessType AccessType, ctx *gin.Context) bool {
-	if projectMember.Role == domain.ProjectMemberRole(Owner) {
+func CheckRole(role domain.AccessRole, memberType MemberType, ctx *gin.Context) bool {
+	if role == domain.AccessOwnerRole {
 		return true
 	}
 
-	if projectMember.Role == domain.ProjectAdminRole && accessType == Admin {
+	if role == domain.AccessAdminRole && memberType == Admin {
 		return true
 	}
 
-	if accessType == Member && (projectMember.Role == domain.ProjectReadRole && ctx.Request.Method == "GET") {
+	if memberType == Member && (role == domain.AccessReadRole && ctx.Request.Method == "GET") {
 		return true
 	}
 
-	if accessType == Member && (projectMember.Role == domain.ProjectWriteRole && (ctx.Request.Method == "POST" || ctx.Request.Method == "PUT" || ctx.Request.Method == "PATCH")) {
+	if memberType == Member && (role == domain.AccessWriteRole && (ctx.Request.Method == "POST" || ctx.Request.Method == "PUT" || ctx.Request.Method == "PATCH")) {
 		return true
 	}
 

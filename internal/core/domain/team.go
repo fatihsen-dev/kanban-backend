@@ -2,19 +2,19 @@ package domain
 
 import "time"
 
-type TeamRole string
+type AccessRole string
 
 const (
-	TeamOwnerRole TeamRole = "owner"
-	TeamAdminRole TeamRole = "admin"
-	TeamWriteRole TeamRole = "write"
-	TeamReadRole  TeamRole = "read"
+	AccessOwnerRole AccessRole = "owner"
+	AccessAdminRole AccessRole = "admin"
+	AccessWriteRole AccessRole = "write"
+	AccessReadRole  AccessRole = "read"
 )
 
 type Team struct {
 	ID        string
 	Name      string
-	Role      TeamRole
+	Role      AccessRole
 	ProjectID string
 	CreatedAt time.Time
 }

@@ -46,9 +46,20 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 		return
 	}
 
+	projectMember, ok := c.MustGet("project_member").(domain.ProjectMember)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Project member not found"))
+		return
+	}
+
+	if projectMember.Role != domain.AccessOwnerRole && requestData.Role != string(domain.AccessAdminRole) {
+		c.JSON(http.StatusForbidden, datatransfers.ResponseError("You are not authorized to create a team"))
+		return
+	}
+
 	team := &domain.Team{
 		Name:      requestData.Name,
-		Role:      domain.TeamRole(requestData.Role),
+		Role:      domain.AccessRole(requestData.Role),
 		ProjectID: requestData.ProjectID,
 	}
 
@@ -156,7 +167,7 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	}
 
 	if requestData.Role != nil {
-		team.Role = domain.TeamRole(*requestData.Role)
+		team.Role = domain.AccessRole(*requestData.Role)
 	}
 
 	err = h.teamService.UpdateTeam(c.Request.Context(), team)
