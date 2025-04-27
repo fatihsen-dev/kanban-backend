@@ -27,6 +27,24 @@ func (s *UserService) GetUserByID(ctx context.Context, id string) (*domain.User,
 	return s.userRepo.GetByID(ctx, id)
 }
 
+func (s *UserService) GetUsersByIDs(ctx context.Context, ids []string) ([]*domain.User, error) {
+	users, err := s.userRepo.GetByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	userMap := make(map[string]*domain.User)
+	for _, user := range users {
+		userMap[user.ID] = user
+	}
+
+	usersResponse := make([]*domain.User, len(ids))
+	for i, id := range ids {
+		usersResponse[i] = userMap[id]
+	}
+	return usersResponse, nil
+}
+
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	return s.userRepo.GetByEmail(ctx, email)
 }

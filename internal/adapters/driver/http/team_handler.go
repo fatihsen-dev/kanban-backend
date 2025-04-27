@@ -13,6 +13,7 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type teamHandler struct {
@@ -52,7 +53,7 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 		return
 	}
 
-	if projectMember.Role != domain.AccessOwnerRole && requestData.Role != string(domain.AccessAdminRole) {
+	if projectMember.Role != domain.AccessOwnerRole && requestData.Role == string(domain.AccessAdminRole) {
 		c.JSON(http.StatusForbidden, datatransfers.ResponseError("You are not authorized to create a team"))
 		return
 	}
@@ -65,7 +66,8 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 
 	err := h.teamService.CreateTeam(c.Request.Context(), team)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to create team"))
+		zap.L().Error("Failed to create team", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError(err.Error()))
 		return
 	}
 

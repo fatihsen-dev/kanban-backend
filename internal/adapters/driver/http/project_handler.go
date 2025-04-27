@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -82,10 +81,10 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 		return
 	}
 
-	project, columns, tasksByColumn, teams, projectMembers, err := h.projectService.GetProjectWithDetails(c.Request.Context(), projectID)
+	project, columns, tasksByColumn, teams, projectMembers, users, err := h.projectService.GetProjectWithDetails(c.Request.Context(), projectID)
 	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusNotFound, datatransfers.ResponseError("Project not found"))
+		zap.L().Error("Failed to get project with details", zap.Error(err))
+		c.JSON(http.StatusNotFound, datatransfers.ResponseError(err.Error()))
 		return
 	}
 
@@ -100,18 +99,31 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 		}
 	}
 
-	memberResponses := make([]responses.ProjectMemberResponse, len(projectMembers))
+	userMap := make(map[string]responses.UserResponse)
+	for _, user := range users {
+		userMap[user.ID] = responses.UserResponse{
+			ID:        user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			IsAdmin:   user.IsAdmin,
+			CreatedAt: user.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	memberResponses := make([]responses.ProjectMemberWithUserResponse, len(projectMembers))
 	for i, member := range projectMembers {
-		memberResponses[i] = responses.ProjectMemberResponse{
+		memberResponses[i] = responses.ProjectMemberWithUserResponse{
 			ID:        member.ID,
 			UserID:    member.UserID,
 			Role:      string(member.Role),
+			TeamID:    member.TeamID,
 			ProjectID: member.ProjectID,
 			CreatedAt: member.CreatedAt.Format(time.RFC3339),
+			User:      userMap[member.UserID],
 		}
 
 		if member.TeamID != nil {
-			memberResponses[i].TeamID = *member.TeamID
+			memberResponses[i].TeamID = member.TeamID
 		}
 	}
 

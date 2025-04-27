@@ -44,7 +44,7 @@ func main() {
 
 	// services
 	userService := service.NewUserService(userRepo)
-	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo, teamRepo, projectMemberRepo)
+	projectService := service.NewProjectService(projectRepo, columnRepo, taskRepo, teamRepo, projectMemberRepo, userRepo)
 	columnService := service.NewColumnService(columnRepo, taskRepo)
 	taskService := service.NewTaskService(taskRepo)
 	projectMemberService := service.NewProjectMemberService(projectMemberRepo, userRepo)
@@ -74,6 +74,10 @@ func main() {
 	// /projects/* routes
 	projectHandler := httphandler.NewProjectHandler(projectService, authnMiddleware, projectAuthzMiddleware, hub)
 	projectHandler.RegisterProjectRouter(router)
+
+	// /projects/:project_id/members/* routes
+	projectMemberHandler := httphandler.NewProjectMemberHandler(projectMemberService, authnMiddleware, hub)
+	projectMemberHandler.RegisterProjectMemberRouter(router)
 
 	// /projects/:project_id/teams/* routes
 	teamHandler := httphandler.NewTeamHandler(teamService, authnMiddleware, hub)
