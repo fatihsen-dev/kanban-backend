@@ -13,15 +13,17 @@ type ProjectService struct {
 	teamRepo          ports.TeamRepository
 	columnRepo        ports.ColumnRepository
 	taskRepo          ports.TaskRepository
+	userRepo          ports.UserRepository
 }
 
-func NewProjectService(projectRepo ports.ProjectRepository, columnRepo ports.ColumnRepository, taskRepo ports.TaskRepository, teamRepo ports.TeamRepository, projectMemberRepo ports.ProjectMemberRepository) *ProjectService {
+func NewProjectService(projectRepo ports.ProjectRepository, columnRepo ports.ColumnRepository, taskRepo ports.TaskRepository, teamRepo ports.TeamRepository, projectMemberRepo ports.ProjectMemberRepository, userRepo ports.UserRepository) *ProjectService {
 	return &ProjectService{
 		projectRepo:       projectRepo,
 		columnRepo:        columnRepo,
 		taskRepo:          taskRepo,
 		teamRepo:          teamRepo,
 		projectMemberRepo: projectMemberRepo,
+		userRepo:          userRepo,
 	}
 }
 
@@ -80,25 +82,40 @@ func (s *ProjectService) GetUserProjects(ctx context.Context, userID string) ([]
 	return s.projectRepo.GetUserProjects(ctx, userID)
 }
 
-func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID string) (*domain.Project, []*domain.Column, map[string][]*domain.Task, []*domain.Team, []*domain.ProjectMember, error) {
+func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID string) (*domain.Project, []*domain.Column, map[string][]*domain.Task, []*domain.Team, []*domain.ProjectMember, []*domain.User, error) {
 	project, err := s.projectRepo.GetByID(ctx, projectID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	teams, err := s.teamRepo.GetTeamsByProjectID(ctx, projectID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	projectMembers, err := s.projectMemberRepo.GetProjectMembersByProjectID(ctx, projectID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
+	}
+
+	userIDs := make([]string, len(projectMembers))
+	for i, projectMember := range projectMembers {
+		userIDs[i] = projectMember.UserID
+	}
+
+	users, err := s.userRepo.GetByIDs(ctx, userIDs)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+
+	userMap := make(map[string]*domain.User)
+	for _, user := range users {
+		userMap[user.ID] = user
 	}
 
 	columns, err := s.columnRepo.GetColumnsByProjectID(ctx, projectID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	columnIDs := make([]string, len(columns))
@@ -108,7 +125,7 @@ func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID st
 
 	tasks, err := s.taskRepo.GetTasksByColumnIDs(ctx, columnIDs)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
 	tasksByColumn := make(map[string][]*domain.Task)
@@ -116,5 +133,5 @@ func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID st
 		tasksByColumn[task.ColumnID] = append(tasksByColumn[task.ColumnID], task)
 	}
 
-	return project, columns, tasksByColumn, teams, projectMembers, nil
+	return project, columns, tasksByColumn, teams, projectMembers, users, nil
 }

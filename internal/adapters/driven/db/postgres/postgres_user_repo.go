@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
+	"github.com/lib/pq"
 )
 
 type PostgresUserRepository struct {
@@ -47,6 +48,26 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 func (r *PostgresUserRepository) GetAll(ctx context.Context) ([]*domain.User, error) {
 	query := `SELECT id, name, email, password_hash, is_admin, created_at FROM users`
 	rows, err := r.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*domain.User
+	for rows.Next() {
+		var user domain.User
+		err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.IsAdmin, &user.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, nil
+}
+
+func (r *PostgresUserRepository) GetByIDs(ctx context.Context, ids []string) ([]*domain.User, error) {
+	query := `SELECT id, name, email, password_hash, is_admin, created_at FROM users WHERE id = ANY($1)`
+	rows, err := r.DB.QueryContext(ctx, query, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
