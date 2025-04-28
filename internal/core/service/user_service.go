@@ -52,3 +52,7 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*domain
 func (s *UserService) GetUsers(ctx context.Context) ([]*domain.User, error) {
 	return s.userRepo.GetAll(ctx)
 }
+
+func (s *UserService) GetUsersByQuery(ctx context.Context, query string) ([]*domain.User, error) {
+	return s.userRepo.GetUsersByQuery(ctx, query)
+}

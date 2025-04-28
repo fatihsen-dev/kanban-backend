@@ -84,3 +84,23 @@ func (r *PostgresUserRepository) GetByIDs(ctx context.Context, ids []string) ([]
 	}
 	return users, nil
 }
+
+func (r *PostgresUserRepository) GetUsersByQuery(ctx context.Context, queryString string) ([]*domain.User, error) {
+	query := `SELECT id, name, email, password_hash, is_admin, created_at FROM users WHERE name ILIKE $1 OR email ILIKE $2`
+	rows, err := r.DB.QueryContext(ctx, query, "%"+queryString+"%", "%"+queryString+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*domain.User
+	for rows.Next() {
+		var user domain.User
+		err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.IsAdmin, &user.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, nil
+}

@@ -18,6 +18,4 @@ type UserRegisterResponse struct {
 	User  UserResponse `json:"user"`
 }
 
-type UserAuthResponse struct {
-	User UserResponse `json:"user"`
-}
+type UserAuthResponse UserResponse
