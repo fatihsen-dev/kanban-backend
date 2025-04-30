@@ -151,13 +151,11 @@ func (h *authHandler) AuthUser(c *gin.Context) {
 	c.Set("user", user)
 
 	responseData := responses.UserAuthResponse{
-		User: responses.UserResponse{
-			ID:        user.ID,
-			Name:      user.Name,
-			Email:     user.Email,
-			IsAdmin:   user.IsAdmin,
-			CreatedAt: user.CreatedAt.Format(time.RFC3339),
-		},
+		ID:        user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		IsAdmin:   user.IsAdmin,
+		CreatedAt: user.CreatedAt.Format(time.RFC3339),
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Authenticated user", responseData))

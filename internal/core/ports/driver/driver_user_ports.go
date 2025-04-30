@@ -12,4 +12,5 @@ type UserService interface {
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	GetUsers(ctx context.Context) ([]*domain.User, error)
 	GetUsersByIDs(ctx context.Context, ids []string) ([]*domain.User, error)
+	GetUsersByQuery(ctx context.Context, query string) ([]*domain.User, error)
 }
