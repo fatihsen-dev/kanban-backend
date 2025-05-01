@@ -79,8 +79,8 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 		CreatedAt: team.CreatedAt.Format(time.RFC3339),
 	}
 
-	h.hub.SendMessage(team.ProjectID, ws.BaseResponse{
-		Name: "team_created",
+	h.hub.SendMessageToProject(team.ProjectID, ws.BaseResponse{
+		Name: ws.EventNameTeamCreated,
 		Data: responseData,
 	})
 
@@ -185,8 +185,8 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 		ProjectID: team.ProjectID,
 	}
 
-	h.hub.SendMessage(team.ProjectID, ws.BaseResponse{
-		Name: "team_updated",
+	h.hub.SendMessageToProject(team.ProjectID, ws.BaseResponse{
+		Name: ws.EventNameTeamUpdated,
 		Data: responseData,
 	})
 
@@ -219,8 +219,8 @@ func (h *teamHandler) DeleteTeamHandler(c *gin.Context) {
 		ID: teamID,
 	}
 
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "team_deleted",
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameTeamDeleted,
 		Data: responseData,
 	})
 

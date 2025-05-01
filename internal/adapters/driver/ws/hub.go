@@ -63,7 +63,7 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) SendMessage(projectID string, data BaseResponse) {
+func (h *Hub) SendMessageToProject(projectID string, data BaseResponse) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return

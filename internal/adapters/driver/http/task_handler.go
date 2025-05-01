@@ -65,8 +65,8 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 		return
 	}
 
-	h.hub.SendMessage(task.ProjectID, ws.BaseResponse{
-		Name: "task_created",
+	h.hub.SendMessageToProject(task.ProjectID, ws.BaseResponse{
+		Name: ws.EventNameTaskCreated,
 		Data: responses.TaskResponse{
 			ID:        task.ID,
 			Title:     task.Title,
@@ -186,14 +186,14 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	}
 
 	if requestData.ColumnID != nil {
-		h.hub.SendMessage(projectID, ws.BaseResponse{
-			Name: "task_moved",
+		h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+			Name: ws.EventNameTaskMoved,
 			Data: responseData,
 		})
 	}
 
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "task_updated",
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameTaskUpdated,
 		Data: responseData,
 	})
 
@@ -225,8 +225,8 @@ func (h *taskHandler) DeleteTaskHandler(c *gin.Context) {
 		ID: id,
 	}
 
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "task_deleted",
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameTaskDeleted,
 		Data: responseData,
 	})
 
