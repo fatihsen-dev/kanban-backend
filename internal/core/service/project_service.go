@@ -79,7 +79,17 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id string) (*domain
 }
 
 func (s *ProjectService) GetUserProjects(ctx context.Context, userID string) ([]*domain.Project, error) {
-	return s.projectRepo.GetUserProjects(ctx, userID)
+	projectMembers, err := s.projectMemberRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	projectIDs := make([]string, len(projectMembers))
+	for i, projectMember := range projectMembers {
+		projectIDs[i] = projectMember.ProjectID
+	}
+
+	return s.projectRepo.GetByIDs(ctx, projectIDs)
 }
 
 func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID string) (*domain.Project, []*domain.Column, map[string][]*domain.Task, []*domain.Team, []*domain.ProjectMember, []*domain.User, error) {

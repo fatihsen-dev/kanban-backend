@@ -50,7 +50,7 @@ func main() {
 	taskService := service.NewTaskService(taskRepo)
 	projectMemberService := service.NewProjectMemberService(projectMemberRepo, userRepo)
 	teamService := service.NewTeamService(teamRepo)
-	invitationService := service.NewInvitationService(invitationRepo, userRepo, projectRepo)
+	invitationService := service.NewInvitationService(invitationRepo, userRepo, projectRepo, projectMemberRepo)
 
 	hub := ws.NewHub(projectMemberService)
 	go hub.Run()

@@ -70,3 +70,23 @@ func (r *PostgresProjectMemberRepository) GetByUserIDAndProjectID(ctx context.Co
 	}
 	return &projectMember, nil
 }
+
+func (r *PostgresProjectMemberRepository) GetByUserID(ctx context.Context, userID string) ([]*domain.ProjectMember, error) {
+	query := `SELECT id, team_id, user_id, project_id, role, created_at FROM project_members WHERE user_id = $1`
+	rows, err := r.DB.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projectMembers []*domain.ProjectMember
+	for rows.Next() {
+		var projectMember domain.ProjectMember
+		err := rows.Scan(&projectMember.ID, &projectMember.TeamID, &projectMember.UserID, &projectMember.ProjectID, &projectMember.Role, &projectMember.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		projectMembers = append(projectMembers, &projectMember)
+	}
+	return projectMembers, nil
+}

@@ -2,24 +2,28 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
 )
 
 type InvitationService struct {
-	invitationRepo ports.InvitationRepository
-	userRepo       ports.UserRepository
-	projectRepo    ports.ProjectRepository
+	invitationRepo    ports.InvitationRepository
+	userRepo          ports.UserRepository
+	projectRepo       ports.ProjectRepository
+	projectMemberRepo ports.ProjectMemberRepository
 }
 
-func NewInvitationService(invitationRepo ports.InvitationRepository, userRepo ports.UserRepository, projectRepo ports.ProjectRepository) *InvitationService {
+func NewInvitationService(invitationRepo ports.InvitationRepository, userRepo ports.UserRepository, projectRepo ports.ProjectRepository, projectMemberRepo ports.ProjectMemberRepository) *InvitationService {
 	return &InvitationService{
-		invitationRepo: invitationRepo,
-		userRepo:       userRepo,
-		projectRepo:    projectRepo,
+		invitationRepo:    invitationRepo,
+		userRepo:          userRepo,
+		projectRepo:       projectRepo,
+		projectMemberRepo: projectMemberRepo,
 	}
 }
 
@@ -170,4 +174,40 @@ func (s *InvitationService) GetInvitations(ctx context.Context, userID string) (
 	}
 
 	return responseData, nil
+}
+
+func (s *InvitationService) GetInvitationByID(ctx context.Context, id string) (*domain.Invitation, error) {
+	return s.invitationRepo.GetByID(ctx, id)
+}
+
+func (s *InvitationService) UpdateInvitationStatus(ctx context.Context, request requests.InvitationUpdateStatusRequest) error {
+	invitation, err := s.GetInvitationByID(ctx, request.ID)
+	if err != nil {
+		return err
+	}
+
+	if invitation.InviteeID != request.UserID {
+		return errors.New("you are not allowed to update this invitation")
+	}
+
+	if invitation.Status != domain.InvitationStatusPending {
+		return errors.New("this invitation has already been accepted or rejected")
+	}
+
+	err = s.projectMemberRepo.Save(ctx, &domain.ProjectMember{
+		UserID:    request.UserID,
+		ProjectID: invitation.ProjectID,
+		Role:      domain.AccessReadRole,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	err = s.invitationRepo.UpdateStatus(ctx, request.ID, request.Status)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

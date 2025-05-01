@@ -62,7 +62,7 @@ func (r *PostgresInvitationRepository) SaveInvitations(ctx context.Context, invi
 }
 
 func (r *PostgresInvitationRepository) GetInvitations(ctx context.Context, userID string) ([]*domain.Invitation, error) {
-	query := `SELECT * FROM invitations WHERE invitee_id = $1 AND status = 'pending'`
+	query := `SELECT * FROM invitations WHERE invitee_id = $1 AND status = 'pending' ORDER BY created_at DESC`
 	rows, err := r.DB.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (r *PostgresInvitationRepository) GetInvitations(ctx context.Context, userI
 	invitations := []*domain.Invitation{}
 	for rows.Next() {
 		var invitation domain.Invitation
-		err := rows.Scan(&invitation.ID, &invitation.InviterID, &invitation.InviteeID, &invitation.ProjectID, &invitation.Message, &invitation.Status)
+		err := rows.Scan(&invitation.ID, &invitation.InviterID, &invitation.InviteeID, &invitation.ProjectID, &invitation.Message, &invitation.Status, &invitation.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -80,4 +80,26 @@ func (r *PostgresInvitationRepository) GetInvitations(ctx context.Context, userI
 	}
 
 	return invitations, nil
+}
+
+func (r *PostgresInvitationRepository) GetByID(ctx context.Context, id string) (*domain.Invitation, error) {
+	query := `SELECT * FROM invitations WHERE id = $1`
+	var invitation domain.Invitation
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(&invitation.ID, &invitation.InviterID, &invitation.InviteeID, &invitation.ProjectID, &invitation.Message, &invitation.Status, &invitation.CreatedAt)
+	if err != nil {
+
+		return nil, err
+	}
+
+	return &invitation, nil
+}
+
+func (r *PostgresInvitationRepository) UpdateStatus(ctx context.Context, id string, status string) error {
+	query := `UPDATE invitations SET status = $1 WHERE id = $2`
+	_, err := r.DB.ExecContext(ctx, query, status, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
