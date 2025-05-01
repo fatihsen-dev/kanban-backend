@@ -41,6 +41,7 @@ func main() {
 	taskRepo := db.NewPostgresTaskRepo(postgresDB)
 	teamRepo := db.NewPostgresTeamRepo(postgresDB)
 	projectMemberRepo := db.NewPostgresProjectMemberRepo(postgresDB)
+	invitationRepo := db.NewPostgresInvitationRepo(postgresDB)
 
 	// services
 	userService := service.NewUserService(userRepo)
@@ -49,11 +50,12 @@ func main() {
 	taskService := service.NewTaskService(taskRepo)
 	projectMemberService := service.NewProjectMemberService(projectMemberRepo, userRepo)
 	teamService := service.NewTeamService(teamRepo)
+	invitationService := service.NewInvitationService(invitationRepo, userRepo, projectRepo)
 
 	hub := ws.NewHub(projectMemberService)
 	go hub.Run()
 
-	router.GET("/ws/:project_id", func(c *gin.Context) {
+	router.GET("/ws", func(c *gin.Context) {
 		ws.ServeWs(hub, c)
 	})
 
@@ -70,6 +72,10 @@ func main() {
 	// /auth/* routes
 	authHandler := httphandler.NewAuthHandler(userService, authnMiddleware)
 	authHandler.RegisterAuthRouter(router)
+
+	// /invitations/* routes
+	invitationHandler := httphandler.NewInvitationHandler(invitationService, authnMiddleware, hub)
+	invitationHandler.RegisterInvitationRouter(router)
 
 	// /projects/* routes
 	projectHandler := httphandler.NewProjectHandler(projectService, authnMiddleware, projectAuthzMiddleware, hub)

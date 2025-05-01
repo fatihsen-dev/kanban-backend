@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
+	"github.com/lib/pq"
 )
 
 type PostgresProjectRepository struct {
@@ -53,5 +54,25 @@ func (r *PostgresProjectRepository) GetUserProjects(ctx context.Context, userID 
 		projects = append(projects, &project)
 	}
 
+	return projects, nil
+}
+
+func (r *PostgresProjectRepository) GetByIDs(ctx context.Context, ids []string) ([]*domain.Project, error) {
+	query := `SELECT id, name, owner_id, created_at FROM projects WHERE id = ANY($1)`
+	rows, err := r.DB.QueryContext(ctx, query, pq.Array(ids))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projects []*domain.Project
+	for rows.Next() {
+		var project domain.Project
+		err := rows.Scan(&project.ID, &project.Name, &project.OwnerID, &project.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, &project)
+	}
 	return projects, nil
 }

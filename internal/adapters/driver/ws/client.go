@@ -18,15 +18,17 @@ type Client struct {
 	hub       *Hub
 	conn      *websocket.Conn
 	send      chan []byte
-	projectID string
+	projectID *string
+	userID    string
 }
 
-func NewClient(hub *Hub, conn *websocket.Conn, projectID string) *Client {
+func NewClient(hub *Hub, conn *websocket.Conn, projectID *string, userID string) *Client {
 	return &Client{
 		hub:       hub,
 		conn:      conn,
 		send:      make(chan []byte, 256),
 		projectID: projectID,
+		userID:    userID,
 	}
 }
 
@@ -49,7 +51,7 @@ func (c *Client) readPump() {
 			break
 		}
 
-		fmt.Printf("Message: %s\nProject: %s\n", string(message), c.projectID)
+		fmt.Printf("Message: %s\nProject: %s\nUser: %s\n", string(message), *c.projectID, c.userID)
 	}
 }
 
