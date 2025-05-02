@@ -80,20 +80,26 @@ func CheckAccess(userID string, projectID string, ctx context.Context, projectMe
 }
 
 func CheckRole(role domain.AccessRole, memberType MemberType, ctx *gin.Context) bool {
-	if role == domain.AccessOwnerRole {
+	switch {
+	case role == domain.AccessOwnerRole:
 		return true
-	}
 
-	if role == domain.AccessAdminRole && memberType == Admin {
+	case role == domain.AccessAdminRole && memberType == Admin:
 		return true
-	}
 
-	if memberType == Member && (role == domain.AccessReadRole && ctx.Request.Method == "GET") {
-		return true
-	}
+	case memberType == Member:
+		isReadMethod := ctx.Request.Method == "GET"
+		isWriteMethod := ctx.Request.Method == "POST" ||
+			ctx.Request.Method == "PUT" ||
+			ctx.Request.Method == "PATCH" ||
+			ctx.Request.Method == "DELETE"
 
-	if memberType == Member && (role == domain.AccessWriteRole && (ctx.Request.Method == "POST" || ctx.Request.Method == "PUT" || ctx.Request.Method == "PATCH")) {
-		return true
+		switch {
+		case (role == domain.AccessReadRole || role == domain.AccessWriteRole) && isReadMethod:
+			return true
+		case role == domain.AccessWriteRole && isWriteMethod:
+			return true
+		}
 	}
 
 	return false
