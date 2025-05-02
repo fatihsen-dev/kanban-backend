@@ -190,12 +190,12 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 			Name: ws.EventNameTaskMoved,
 			Data: responseData,
 		})
+	} else {
+		h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+			Name: ws.EventNameTaskUpdated,
+			Data: responseData,
+		})
 	}
-
-	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
-		Name: ws.EventNameTaskUpdated,
-		Data: responseData,
-	})
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Task updated successfully", responseData))
 }
