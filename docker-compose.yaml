@@ -1,4 +1,18 @@
 services:
+   api:
+      build:
+         context: .
+         dockerfile: Dockerfile
+      ports:
+         - "5000:5000"
+      environment:
+         - GIN_MODE=release
+      depends_on:
+         - postgres
+      restart: unless-stopped
+      volumes:
+         - ./config/config.docker.yaml:/app/config/config.yaml
+
    postgres:
       image: postgres:16-alpine
       ports:
@@ -6,7 +20,7 @@ services:
       environment:
          - POSTGRES_USER=postgres
          - POSTGRES_PASSWORD=postgres
-         - POSTGRES_DB=todo
+         - POSTGRES_DB=kanban
       volumes:
          - postgres_data:/var/lib/postgresql/data
 
