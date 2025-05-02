@@ -73,8 +73,8 @@ func (h *columnHandler) CreateColumnHandler(c *gin.Context) {
 		CreatedAt: column.CreatedAt.Format(time.RFC3339),
 	}
 
-	h.hub.SendMessage(column.ProjectID, ws.BaseResponse{
-		Name: "column_created",
+	h.hub.SendMessageToProject(column.ProjectID, ws.BaseResponse{
+		Name: ws.EventNameColumnCreated,
 		Data: responseData,
 	})
 
@@ -188,8 +188,8 @@ func (h *columnHandler) UpdateColumnHandler(c *gin.Context) {
 		Color: column.Color,
 	}
 
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "column_updated",
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameColumnUpdated,
 		Data: responseData,
 	})
 
@@ -222,8 +222,8 @@ func (h *columnHandler) DeleteColumnHandler(c *gin.Context) {
 		ID: id,
 	}
 
-	h.hub.SendMessage(projectID, ws.BaseResponse{
-		Name: "column_deleted",
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameColumnDeleted,
 		Data: responseData,
 	})
 

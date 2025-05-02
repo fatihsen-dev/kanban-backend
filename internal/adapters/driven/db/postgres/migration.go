@@ -87,4 +87,21 @@ func Migrate(db *sql.DB) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	query = `CREATE TABLE IF NOT EXISTS invitations (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		inviter_id UUID NOT NULL,
+		invitee_id UUID NOT NULL,
+		project_id UUID NOT NULL,
+		message VARCHAR(255) DEFAULT NULL,
+		status VARCHAR(255) NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (inviter_id) REFERENCES users(id) ON DELETE CASCADE,
+		FOREIGN KEY (invitee_id) REFERENCES users(id) ON DELETE CASCADE,
+		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+	)`
+	_, err = db.Exec(query)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

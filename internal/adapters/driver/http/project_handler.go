@@ -31,7 +31,7 @@ func NewProjectHandler(projectService ports.ProjectService, authMiddleware *midd
 func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 	r.Use(h.authMiddleware.Handle(false)).POST("/projects", h.CreateProjectHandler)
 	r.Use(h.authMiddleware.Handle(false)).GET("/projects", h.GetProjectsHandler)
-	r.Use(h.projectAuthzMiddleware.Handle(middlewares.Admin)).GET("/projects/:project_id", h.GetProjectHandler)
+	r.Use(h.projectAuthzMiddleware.Handle(middlewares.Member)).GET("/projects/:project_id", h.GetProjectHandler)
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {

@@ -8,7 +8,6 @@ import (
 	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
 var appConfig = config.Read()
@@ -28,33 +27,31 @@ var upgrader = websocket.Upgrader{
 }
 
 func ServeWs(hub *Hub, c *gin.Context) {
-	groupID := c.Param("project_id")
+	projectID := c.Query("project_id")
 	token := c.Query("token")
 
 	if token == "" {
-		zap.L().Error("No token provided")
 		return
 	}
 
 	user, err := jwt.VerifyToken(token)
 	if err != nil {
-		zap.L().Error("Failed to validate token", zap.Error(err))
 		return
 	}
 
-	_, err = middlewares.CheckAccess(user.ID, groupID, c.Request.Context(), hub.projectMemberService)
-	if err != nil {
-		zap.L().Error("Failed to check member access", zap.Error(err))
-		return
+	if projectID != "" {
+		_, err = middlewares.CheckAccess(user.ID, projectID, c.Request.Context(), hub.projectMemberService)
+		if err != nil {
+			return
+		}
 	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		zap.L().Error("Failed to upgrade connection", zap.Error(err))
 		return
 	}
 
-	client := NewClient(hub, conn, groupID)
+	client := NewClient(hub, conn, &projectID, user.ID)
 
 	hub.register <- client
 
