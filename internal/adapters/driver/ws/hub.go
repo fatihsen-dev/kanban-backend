@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 )
 
@@ -37,8 +38,10 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.clients[client.userID] = client
+			go client.SendUserStatusEvent("online")
 		case client := <-h.unregister:
 			if client, ok := h.clients[client.userID]; ok {
+				go client.SendUserStatusEvent("offline")
 				delete(h.clients, client.userID)
 				close(client.send)
 			}
@@ -48,7 +51,7 @@ func (h *Hub) Run() {
 			}
 
 			for userID, client := range h.clients {
-				if *client.projectID != message.ProjectID {
+				if client.projectID == nil || *client.projectID != message.ProjectID {
 					continue
 				}
 
@@ -82,6 +85,25 @@ func (h *Hub) SendMessageToUser(userID string, data BaseResponse) {
 	}
 
 	if client, ok := h.clients[userID]; ok {
-		client.send <- jsonData
+		select {
+		case client.send <- jsonData:
+		default:
+			close(client.send)
+			delete(h.clients, userID)
+		}
 	}
+}
+
+func (h *Hub) GetOnlineUsers(projectID string) []responses.OnlineProjectMembersResponse {
+	onlineUsers := []responses.OnlineProjectMembersResponse{}
+	for _, client := range h.clients {
+		if client.projectID != nil && *client.projectID == projectID {
+			onlineUsers = append(onlineUsers, responses.OnlineProjectMembersResponse{
+				ID:     client.userID,
+				Status: "online",
+			})
+		}
+	}
+
+	return onlineUsers
 }

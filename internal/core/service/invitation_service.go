@@ -180,34 +180,40 @@ func (s *InvitationService) GetInvitationByID(ctx context.Context, id string) (*
 	return s.invitationRepo.GetByID(ctx, id)
 }
 
-func (s *InvitationService) UpdateInvitationStatus(ctx context.Context, request requests.InvitationUpdateStatusRequest) error {
+func (s *InvitationService) UpdateInvitationStatus(ctx context.Context, request requests.InvitationUpdateStatusRequest) (*domain.ProjectMember, *domain.User, error) {
 	invitation, err := s.GetInvitationByID(ctx, request.ID)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	if invitation.InviteeID != request.UserID {
-		return errors.New("you are not allowed to update this invitation")
+		return nil, nil, errors.New("you are not allowed to update this invitation")
 	}
 
 	if invitation.Status != domain.InvitationStatusPending {
-		return errors.New("this invitation has already been accepted or rejected")
+		return nil, nil, errors.New("this invitation has already been accepted or rejected")
 	}
 
-	err = s.projectMemberRepo.Save(ctx, &domain.ProjectMember{
+	projectMember := &domain.ProjectMember{
 		UserID:    request.UserID,
 		ProjectID: invitation.ProjectID,
 		Role:      domain.AccessReadRole,
-	})
+	}
 
+	err = s.projectMemberRepo.Save(ctx, projectMember)
 	if err != nil {
-		return err
+		return nil, nil, err
+	}
+
+	user, err := s.userRepo.GetByID(ctx, request.UserID)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	err = s.invitationRepo.UpdateStatus(ctx, request.ID, request.Status)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	return nil
+	return projectMember, user, nil
 }

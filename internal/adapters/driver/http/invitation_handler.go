@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
@@ -91,7 +92,7 @@ func (h *invitationHandler) GetInvitationsHandler(c *gin.Context) {
 }
 
 func (h *invitationHandler) UpdateInvitationStatusHandler(c *gin.Context) {
-	user := c.MustGet("user").(*jwt.UserClaims)
+	authUser := c.MustGet("user").(*jwt.UserClaims)
 
 	var request requests.InvitationUpdateStatusRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -99,17 +100,38 @@ func (h *invitationHandler) UpdateInvitationStatusHandler(c *gin.Context) {
 		return
 	}
 	request.ID = c.Param("invitation_id")
-	request.UserID = user.ID
+	request.UserID = authUser.ID
 	if err := validation.Validate(request); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 
-	err := h.invitationService.UpdateInvitationStatus(c.Request.Context(), request)
+	projectMember, user, err := h.invitationService.UpdateInvitationStatus(c.Request.Context(), request)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Invitation accepted successfully", nil))
+	responseData := responses.ProjectMemberWithUserResponse{
+		ID:        projectMember.ID,
+		UserID:    projectMember.UserID,
+		Role:      string(projectMember.Role),
+		TeamID:    projectMember.TeamID,
+		ProjectID: projectMember.ProjectID,
+		CreatedAt: projectMember.CreatedAt.Format(time.RFC3339),
+		User: responses.UserResponse{
+			ID:        user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			IsAdmin:   user.IsAdmin,
+			CreatedAt: user.CreatedAt.Format(time.RFC3339),
+		},
+	}
+
+	h.hub.SendMessageToProject(projectMember.ProjectID, ws.BaseResponse{
+		Name: ws.EventNameProjectMemberCreated,
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Invitation accepted successfully", responseData))
 }
