@@ -86,3 +86,17 @@ func (c *Client) writePump() {
 		}
 	}
 }
+
+func (c *Client) SendUserStatusEvent(status string) {
+	if c.projectID == nil {
+		return
+	}
+
+	c.hub.SendMessageToProject(*c.projectID, BaseResponse{
+		Name: EventNameUserStatusUpdated,
+		Data: map[string]interface{}{
+			"id":     c.userID,
+			"status": status,
+		},
+	})
+}

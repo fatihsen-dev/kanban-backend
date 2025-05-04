@@ -12,5 +12,5 @@ type InvitationService interface {
 	GetInvitationByID(ctx context.Context, id string) (*domain.Invitation, error)
 	CreateInvitations(ctx context.Context, invitations []*domain.Invitation) ([]responses.InvitationResponse, error)
 	GetInvitations(ctx context.Context, userID string) ([]responses.InvitationResponse, error)
-	UpdateInvitationStatus(ctx context.Context, request requests.InvitationUpdateStatusRequest) error
+	UpdateInvitationStatus(ctx context.Context, request requests.InvitationUpdateStatusRequest) (*domain.ProjectMember, *domain.User, error)
 }
