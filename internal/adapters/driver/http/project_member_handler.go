@@ -4,24 +4,72 @@ import (
 	"net/http"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
+	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/gin-gonic/gin"
 )
 
 type projectMemberHandler struct {
-	projectMemberService ports.ProjectMemberService
-	authMiddleware       *middlewares.AuthnMiddleware
-	hub                  *ws.Hub
+	projectMemberService   ports.ProjectMemberService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewProjectMemberHandler(projectMemberService ports.ProjectMemberService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *projectMemberHandler {
-	return &projectMemberHandler{projectMemberService: projectMemberService, authMiddleware: authMiddleware, hub: hub}
+func NewProjectMemberHandler(projectMemberService ports.ProjectMemberService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *projectMemberHandler {
+	return &projectMemberHandler{projectMemberService: projectMemberService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *projectMemberHandler) RegisterProjectMemberRouter(r *gin.Engine) {
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/members/online", h.GetOnlineProjectMembersHandler)
+
+	projectMemberGroup := r.Group("/projects/:project_id/members")
+
+	projectMemberGroup.Use(h.authMiddleware.Handle(false))
+	projectMemberGroup.PUT("/:member_id", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.UpdateProjectMemberHandler)
+	projectMemberGroup.GET("/online", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetOnlineProjectMembersHandler)
+}
+
+func (h *projectMemberHandler) UpdateProjectMemberHandler(c *gin.Context) {
+	projectID := c.Param("project_id")
+	memberID := c.Param("member_id")
+
+	var requestData requests.UpdateProjectMemberRequest
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
+	requestData.ID = memberID
+	requestData.ProjectID = projectID
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
+	err := h.projectMemberService.UpdateProjectMember(c.Request.Context(), &domain.ProjectMember{
+		ID:        memberID,
+		ProjectID: projectID,
+		Role:      domain.AccessRole(requestData.Role),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: "project_member_updated",
+		Data: map[string]interface{}{
+			"id":   memberID,
+			"role": requestData.Role,
+		},
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project member updated successfully", nil))
 }
 
 func (h *projectMemberHandler) GetOnlineProjectMembersHandler(c *gin.Context) {

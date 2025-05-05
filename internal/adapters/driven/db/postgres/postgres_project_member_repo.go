@@ -90,3 +90,12 @@ func (r *PostgresProjectMemberRepository) GetByUserID(ctx context.Context, userI
 	}
 	return projectMembers, nil
 }
+
+func (r *PostgresProjectMemberRepository) UpdateProjectMember(ctx context.Context, projectMember *domain.ProjectMember) error {
+	query := `UPDATE project_members SET role = $1 WHERE id = $2`
+	_, err := r.DB.ExecContext(ctx, query, projectMember.Role, projectMember.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

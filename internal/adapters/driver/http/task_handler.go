@@ -17,21 +17,27 @@ import (
 )
 
 type taskHandler struct {
-	taskService    ports.TaskService
-	authMiddleware *middlewares.AuthnMiddleware
-	hub            *ws.Hub
+	taskService            ports.TaskService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *taskHandler {
-	return &taskHandler{taskService: taskService, authMiddleware: authMiddleware, hub: hub}
+func NewTaskHandler(taskService ports.TaskService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *taskHandler {
+	return &taskHandler{taskService: taskService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
-	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/tasks", h.CreateTaskHandler)
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/tasks", h.GetTasksHandler)
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/tasks/:task_id", h.GetTaskHandler)
-	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/tasks/:task_id", h.UpdateTaskHandler)
-	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/tasks/:task_id", h.DeleteTaskHandler)
+
+	taskGroup := r.Group("/projects/:project_id/tasks")
+
+	taskGroup.Use(h.authMiddleware.Handle(false))
+
+	taskGroup.POST("", h.projectAuthzMiddleware.Handle(middlewares.Member), h.CreateTaskHandler)
+	taskGroup.GET("", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTasksHandler)
+	taskGroup.GET("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTaskHandler)
+	taskGroup.PUT("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.UpdateTaskHandler)
+	taskGroup.DELETE("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.DeleteTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {

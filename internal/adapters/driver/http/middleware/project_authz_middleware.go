@@ -80,11 +80,12 @@ func CheckAccess(userID string, projectID string, ctx context.Context, projectMe
 }
 
 func CheckRole(role domain.AccessRole, memberType MemberType, ctx *gin.Context) bool {
+
 	switch {
 	case role == domain.AccessOwnerRole:
 		return true
 
-	case role == domain.AccessAdminRole && memberType == Admin:
+	case role == domain.AccessAdminRole && memberType != Owner:
 		return true
 
 	case memberType == Member:
