@@ -88,13 +88,14 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 		return
 	}
 
-	teamResponses := make([]responses.TeamResponse, len(teams))
+	teamResponses := make([]responses.TeamWithMembersResponse, len(teams))
 	for i, team := range teams {
-		teamResponses[i] = responses.TeamResponse{
+		teamResponses[i] = responses.TeamWithMembersResponse{
 			ID:        team.ID,
 			Name:      team.Name,
 			Role:      string(team.Role),
 			ProjectID: team.ProjectID,
+			Members:   make([]responses.ProjectMemberResponse, 0),
 			CreatedAt: team.CreatedAt.Format(time.RFC3339),
 		}
 	}

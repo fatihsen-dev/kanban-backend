@@ -13,6 +13,6 @@ type ProjectWithDetailsResponse struct {
 	OwnerID   string                          `json:"owner_id"`
 	CreatedAt string                          `json:"created_at"`
 	Columns   []ColumnWithDetailsResponse     `json:"columns"`
-	Teams     []TeamResponse                  `json:"teams"`
+	Teams     []TeamWithMembersResponse       `json:"teams"`
 	Members   []ProjectMemberWithUserResponse `json:"members"`
 }
