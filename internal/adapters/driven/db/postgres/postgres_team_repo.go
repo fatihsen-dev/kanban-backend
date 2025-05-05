@@ -25,9 +25,9 @@ func (r *PostgresTeamRepository) Save(ctx context.Context, team *domain.Team) er
 }
 
 func (r *PostgresTeamRepository) GetByID(ctx context.Context, id string) (*domain.Team, error) {
-	query := `SELECT id, name, project_id, created_at FROM teams WHERE id = $1`
+	query := `SELECT id, name, role, project_id, created_at FROM teams WHERE id = $1`
 	var team domain.Team
-	err := r.DB.QueryRowContext(ctx, query, id).Scan(&team.ID, &team.Name, &team.ProjectID, &team.CreatedAt)
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(&team.ID, &team.Name, &team.Role, &team.ProjectID, &team.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (r *PostgresTeamRepository) GetByID(ctx context.Context, id string) (*domai
 }
 
 func (r *PostgresTeamRepository) GetTeamsByProjectID(ctx context.Context, projectID string) ([]*domain.Team, error) {
-	query := `SELECT id, name, project_id, created_at FROM teams WHERE project_id = $1`
+	query := `SELECT id, name, role, project_id, created_at FROM teams WHERE project_id = $1`
 	rows, err := r.DB.QueryContext(ctx, query, projectID)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (r *PostgresTeamRepository) GetTeamsByProjectID(ctx context.Context, projec
 	var teams []*domain.Team
 	for rows.Next() {
 		var team domain.Team
-		err := rows.Scan(&team.ID, &team.Name, &team.ProjectID, &team.CreatedAt)
+		err := rows.Scan(&team.ID, &team.Name, &team.Role, &team.ProjectID, &team.CreatedAt)
 		if err != nil {
 			return nil, err
 		}

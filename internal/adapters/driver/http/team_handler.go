@@ -71,11 +71,12 @@ func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
 		return
 	}
 
-	responseData := responses.TeamResponse{
+	responseData := responses.TeamWithMembersResponse{
 		ID:        team.ID,
 		Name:      team.Name,
 		Role:      string(team.Role),
 		ProjectID: team.ProjectID,
+		Members:   make([]responses.ProjectMemberResponse, 0),
 		CreatedAt: team.CreatedAt.Format(time.RFC3339),
 	}
 
