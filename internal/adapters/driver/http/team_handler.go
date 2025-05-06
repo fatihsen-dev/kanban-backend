@@ -149,6 +149,7 @@ func (h *teamHandler) GetTeamHandler(c *gin.Context) {
 
 func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	teamID := c.Param("team_id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(teamID)
 	if err != nil {
@@ -189,10 +190,10 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 		ID:        team.ID,
 		Name:      team.Name,
 		Role:      string(team.Role),
-		ProjectID: team.ProjectID,
+		ProjectID: projectID,
 	}
 
-	h.hub.SendMessageToProject(team.ProjectID, ws.BaseResponse{
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
 		Name: ws.EventNameTeamUpdated,
 		Data: responseData,
 	})

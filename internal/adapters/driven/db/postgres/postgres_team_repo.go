@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
@@ -35,7 +37,7 @@ func (r *PostgresTeamRepository) GetByID(ctx context.Context, id string) (*domai
 }
 
 func (r *PostgresTeamRepository) GetTeamsByProjectID(ctx context.Context, projectID string) ([]*domain.Team, error) {
-	query := `SELECT id, name, role, project_id, created_at FROM teams WHERE project_id = $1`
+	query := `SELECT id, name, role, project_id, created_at FROM teams WHERE project_id = $1 ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query, projectID)
 	if err != nil {
 		return nil, err
@@ -55,11 +57,40 @@ func (r *PostgresTeamRepository) GetTeamsByProjectID(ctx context.Context, projec
 }
 
 func (r *PostgresTeamRepository) Update(ctx context.Context, team *domain.Team) error {
-	query := `UPDATE teams SET name = $1, role = $2 WHERE id = $3`
-	_, err := r.DB.ExecContext(ctx, query, team.Name, team.Role, team.ID)
-	if err != nil {
-		return err
+	queryBase := "UPDATE teams SET "
+	queryWhere := " WHERE id = $%d"
+
+	setClauses := []string{}
+	args := []interface{}{}
+	paramIndex := 1
+
+	if team.Name != "" {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", paramIndex))
+		args = append(args, team.Name)
+		paramIndex++
 	}
+
+	if team.Role != "" {
+		setClauses = append(setClauses, fmt.Sprintf("role = $%d", paramIndex))
+		args = append(args, team.Role)
+		paramIndex++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	querySet := strings.Join(setClauses, ", ")
+
+	args = append(args, team.ID)
+
+	finalQuery := queryBase + querySet + fmt.Sprintf(queryWhere, paramIndex)
+
+	_, err := r.DB.ExecContext(ctx, finalQuery, args...)
+	if err != nil {
+		return fmt.Errorf("team update failed: %w", err)
+	}
+
 	return nil
 }
 
