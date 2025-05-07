@@ -63,8 +63,6 @@ func main() {
 	authnMiddleware := middlewares.NewAuthnMiddleware()
 	projectAuthzMiddleware := middlewares.NewProjectAuthzMiddleware(projectMemberService, teamService)
 
-	fmt.Println("projectAuthzMiddleware", projectAuthzMiddleware)
-
 	// /users/* routes
 	userHandler := httphandler.NewUserHandler(userService, authnMiddleware)
 	userHandler.RegisterUserRouter(router)
@@ -74,7 +72,7 @@ func main() {
 	authHandler.RegisterAuthRouter(router)
 
 	// /invitations/* routes
-	invitationHandler := httphandler.NewInvitationHandler(invitationService, authnMiddleware, hub)
+	invitationHandler := httphandler.NewInvitationHandler(invitationService, authnMiddleware, projectAuthzMiddleware, hub)
 	invitationHandler.RegisterInvitationRouter(router)
 
 	// /projects/* routes
@@ -82,19 +80,19 @@ func main() {
 	projectHandler.RegisterProjectRouter(router)
 
 	// /projects/:project_id/members/* routes
-	projectMemberHandler := httphandler.NewProjectMemberHandler(projectMemberService, authnMiddleware, hub)
+	projectMemberHandler := httphandler.NewProjectMemberHandler(projectMemberService, authnMiddleware, projectAuthzMiddleware, hub)
 	projectMemberHandler.RegisterProjectMemberRouter(router)
 
 	// /projects/:project_id/teams/* routes
-	teamHandler := httphandler.NewTeamHandler(teamService, authnMiddleware, hub)
+	teamHandler := httphandler.NewTeamHandler(teamService, authnMiddleware, projectAuthzMiddleware, hub)
 	teamHandler.RegisterTeamRouter(router)
 
 	// /projects/:project_id/columns/* routes
-	columnHandler := httphandler.NewColumnHandler(columnService, authnMiddleware, hub)
+	columnHandler := httphandler.NewColumnHandler(columnService, authnMiddleware, projectAuthzMiddleware, hub)
 	columnHandler.RegisterColumnRouter(router)
 
 	// /projects/:project_id/tasks/* routes
-	taskHandler := httphandler.NewTaskHandler(taskService, authnMiddleware, hub)
+	taskHandler := httphandler.NewTaskHandler(taskService, authnMiddleware, projectAuthzMiddleware, hub)
 	taskHandler.RegisterTaskRouter(router)
 
 	router.Run(fmt.Sprintf(":%s", appConfig.Port))

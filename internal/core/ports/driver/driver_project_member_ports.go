@@ -11,4 +11,5 @@ type ProjectMemberService interface {
 	GetProjectMembersByProjectID(ctx context.Context, projectID string) ([]*domain.ProjectMember, []*domain.User, error)
 	DeleteProjectMemberByID(ctx context.Context, id string) error
 	GetByUserIDAndProjectID(ctx context.Context, userID, projectID string) (*domain.ProjectMember, error)
+	UpdateProjectMember(ctx context.Context, projectMember *domain.ProjectMember) error
 }

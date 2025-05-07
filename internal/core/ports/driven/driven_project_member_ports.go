@@ -12,4 +12,5 @@ type ProjectMemberRepository interface {
 	DeleteByID(ctx context.Context, id string) error
 	GetByUserIDAndProjectID(ctx context.Context, userID, projectID string) (*domain.ProjectMember, error)
 	GetByUserID(ctx context.Context, userID string) ([]*domain.ProjectMember, error)
+	UpdateProjectMember(ctx context.Context, projectMember *domain.ProjectMember) error
 }

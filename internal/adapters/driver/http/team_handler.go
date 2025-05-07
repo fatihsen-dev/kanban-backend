@@ -17,21 +17,27 @@ import (
 )
 
 type teamHandler struct {
-	teamService    ports.TeamService
-	authMiddleware *middlewares.AuthnMiddleware
-	hub            *ws.Hub
+	teamService            ports.TeamService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewTeamHandler(teamService ports.TeamService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *teamHandler {
-	return &teamHandler{teamService: teamService, authMiddleware: authMiddleware, hub: hub}
+func NewTeamHandler(teamService ports.TeamService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *teamHandler {
+	return &teamHandler{teamService: teamService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *teamHandler) RegisterTeamRouter(r *gin.Engine) {
-	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/teams", h.CreateTeamHandler)
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/teams", h.GetTeamsHandler)
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/teams/:team_id", h.GetTeamHandler)
-	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/teams/:team_id", h.UpdateTeamHandler)
-	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/teams/:team_id", h.DeleteTeamHandler)
+
+	teamGroup := r.Group("/projects/:project_id/teams")
+
+	teamGroup.Use(h.authMiddleware.Handle(false))
+
+	teamGroup.POST("", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.CreateTeamHandler)
+	teamGroup.GET("", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTeamsHandler)
+	teamGroup.GET("/:team_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTeamHandler)
+	teamGroup.PUT("/:team_id", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.UpdateTeamHandler)
+	teamGroup.DELETE("/:team_id", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.DeleteTeamHandler)
 }
 
 func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
@@ -143,6 +149,7 @@ func (h *teamHandler) GetTeamHandler(c *gin.Context) {
 
 func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 	teamID := c.Param("team_id")
+	projectID := c.Param("project_id")
 
 	err := validation.ValidateUUID(teamID)
 	if err != nil {
@@ -183,10 +190,10 @@ func (h *teamHandler) UpdateTeamHandler(c *gin.Context) {
 		ID:        team.ID,
 		Name:      team.Name,
 		Role:      string(team.Role),
-		ProjectID: team.ProjectID,
+		ProjectID: projectID,
 	}
 
-	h.hub.SendMessageToProject(team.ProjectID, ws.BaseResponse{
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
 		Name: ws.EventNameTeamUpdated,
 		Data: responseData,
 	})

@@ -17,21 +17,26 @@ import (
 )
 
 type columnHandler struct {
-	columnService  ports.ColumnService
-	authMiddleware *middlewares.AuthnMiddleware
-	hub            *ws.Hub
+	columnService          ports.ColumnService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *columnHandler {
-	return &columnHandler{columnService: columnService, authMiddleware: authMiddleware, hub: hub}
+func NewColumnHandler(columnService ports.ColumnService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *columnHandler {
+	return &columnHandler{columnService: columnService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *columnHandler) RegisterColumnRouter(r *gin.Engine) {
-	r.Use(h.authMiddleware.Handle(false)).POST("/projects/:project_id/columns", h.CreateColumnHandler)
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/columns", h.GetColumnsHandler)
-	r.Use(h.authMiddleware.Handle(false)).GET("/projects/:project_id/columns/:column_id", h.GetColumnHandler)
-	r.Use(h.authMiddleware.Handle(false)).PUT("/projects/:project_id/columns/:column_id", h.UpdateColumnHandler)
-	r.Use(h.authMiddleware.Handle(false)).DELETE("/projects/:project_id/columns/:column_id", h.DeleteColumnHandler)
+	columnGroup := r.Group("/projects/:project_id/columns")
+
+	columnGroup.Use(h.authMiddleware.Handle(false))
+
+	columnGroup.POST("", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.CreateColumnHandler)
+	columnGroup.GET("", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetColumnsHandler)
+	columnGroup.GET("/:column_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetColumnHandler)
+	columnGroup.PUT("/:column_id", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.UpdateColumnHandler)
+	columnGroup.DELETE("/:column_id", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.DeleteColumnHandler)
 }
 
 func (h *columnHandler) CreateColumnHandler(c *gin.Context) {

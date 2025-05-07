@@ -27,9 +27,11 @@ func NewAuthHandler(userService ports.UserService, authMiddleware *middlewares.A
 }
 
 func (h *authHandler) RegisterAuthRouter(r *gin.Engine) {
-	r.POST("/auth/login", h.LoginHandler)
-	r.POST("/auth/register", h.RegisterHandler)
-	r.GET("/auth/me", h.authMiddleware.Handle(false), h.AuthUser)
+	authGroup := r.Group("/auth")
+
+	authGroup.POST("/login", h.LoginHandler)
+	authGroup.POST("/register", h.RegisterHandler)
+	authGroup.GET("/me", h.authMiddleware.Handle(false), h.AuthUser)
 }
 
 func (h *authHandler) LoginHandler(c *gin.Context) {

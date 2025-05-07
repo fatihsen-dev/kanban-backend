@@ -17,19 +17,24 @@ import (
 )
 
 type invitationHandler struct {
-	invitationService ports.InvitationService
-	authMiddleware    *middlewares.AuthnMiddleware
-	hub               *ws.Hub
+	invitationService      ports.InvitationService
+	authMiddleware         *middlewares.AuthnMiddleware
+	projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware
+	hub                    *ws.Hub
 }
 
-func NewInvitationHandler(invitationService ports.InvitationService, authMiddleware *middlewares.AuthnMiddleware, hub *ws.Hub) *invitationHandler {
-	return &invitationHandler{invitationService: invitationService, authMiddleware: authMiddleware, hub: hub}
+func NewInvitationHandler(invitationService ports.InvitationService, authMiddleware *middlewares.AuthnMiddleware, projectAuthzMiddleware *middlewares.ProjectAuthzMiddleware, hub *ws.Hub) *invitationHandler {
+	return &invitationHandler{invitationService: invitationService, authMiddleware: authMiddleware, projectAuthzMiddleware: projectAuthzMiddleware, hub: hub}
 }
 
 func (h *invitationHandler) RegisterInvitationRouter(r *gin.Engine) {
-	r.POST("/invitations", h.authMiddleware.Handle(false), h.CreateInvitationHandler)
-	r.GET("/invitations", h.authMiddleware.Handle(false), h.GetInvitationsHandler)
-	r.POST("/invitations/:invitation_id", h.authMiddleware.Handle(false), h.UpdateInvitationStatusHandler)
+	invitationGroup := r.Group("/invitations")
+
+	invitationGroup.Use(h.authMiddleware.Handle(false))
+
+	invitationGroup.GET("", h.GetInvitationsHandler)
+	invitationGroup.PUT("/:invitation_id", h.UpdateInvitationStatusHandler)
+	invitationGroup.POST("", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.CreateInvitationHandler)
 }
 
 func (h *invitationHandler) CreateInvitationHandler(c *gin.Context) {

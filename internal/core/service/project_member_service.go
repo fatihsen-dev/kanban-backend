@@ -52,3 +52,7 @@ func (s *ProjectMemberService) GetProjectMembersByProjectID(ctx context.Context,
 func (s *ProjectMemberService) GetByUserIDAndProjectID(ctx context.Context, userID, projectID string) (*domain.ProjectMember, error) {
 	return s.projectMemberRepo.GetByUserIDAndProjectID(ctx, userID, projectID)
 }
+
+func (s *ProjectMemberService) UpdateProjectMember(ctx context.Context, projectMember *domain.ProjectMember) error {
+	return s.projectMemberRepo.UpdateProjectMember(ctx, projectMember)
+}
