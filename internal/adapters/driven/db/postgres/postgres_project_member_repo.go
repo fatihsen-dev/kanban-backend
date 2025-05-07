@@ -34,9 +34,28 @@ func (r *PostgresProjectMemberRepository) Save(ctx context.Context, projectMembe
 	return nil
 }
 
-func (r *PostgresProjectMemberRepository) GetProjectMembersByProjectID(ctx context.Context, projectID string) ([]*domain.ProjectMember, error) {
-	query := `SELECT id, team_id, user_id, project_id, role, created_at FROM project_members WHERE project_id = $1`
-	rows, err := r.DB.QueryContext(ctx, query, projectID)
+func (r *PostgresProjectMemberRepository) GetProjectMembersByProjectID(ctx context.Context, projectID string, searchQuery *string) ([]*domain.ProjectMember, error) {
+	var query string
+	var args []interface{}
+
+	if searchQuery != nil && *searchQuery != "" {
+		query = `
+			SELECT DISTINCT pm.id, pm.team_id, pm.user_id, pm.project_id, pm.role, pm.created_at 
+			FROM project_members pm
+			INNER JOIN users u ON pm.user_id = u.id
+			WHERE pm.project_id = $1 
+			AND (
+				LOWER(u.email) LIKE LOWER($2)
+			)`
+		args = []interface{}{projectID, "%" + *searchQuery + "%"}
+	} else {
+		query = `SELECT id, team_id, user_id, project_id, role, created_at 
+				FROM project_members 
+				WHERE project_id = $1`
+		args = []interface{}{projectID}
+	}
+
+	rows, err := r.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

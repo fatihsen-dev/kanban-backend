@@ -30,8 +30,44 @@ func (h *projectMemberHandler) RegisterProjectMemberRouter(r *gin.Engine) {
 	projectMemberGroup := r.Group("/projects/:project_id/members")
 
 	projectMemberGroup.Use(h.authMiddleware.Handle(false))
+	projectMemberGroup.GET("/", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetProjectMembersHandler)
 	projectMemberGroup.PUT("/:member_id", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.UpdateProjectMemberHandler)
 	projectMemberGroup.GET("/online", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetOnlineProjectMembersHandler)
+}
+
+func (h *projectMemberHandler) GetProjectMembersHandler(c *gin.Context) {
+	projectID := c.Param("project_id")
+	query := c.Query("query")
+
+	members, users, err := h.projectMemberService.GetProjectMembersByProjectID(c.Request.Context(), projectID, &query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
+	userMap := make(map[string]*domain.User, len(users))
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+
+	response := make([]responses.ProjectMemberWithUserResponse, len(members))
+	for i, member := range members {
+		user := userMap[member.UserID]
+		response[i] = responses.ProjectMemberWithUserResponse{
+			ID:        member.ID,
+			ProjectID: member.ProjectID,
+			UserID:    member.UserID,
+			Role:      string(member.Role),
+			TeamID:    member.TeamID,
+			CreatedAt: member.CreatedAt.String(),
+			User: responses.UserResponse{
+				ID:    user.ID,
+				Email: user.Email,
+			},
+		}
+	}
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project members fetched successfully", response))
 }
 
 func (h *projectMemberHandler) UpdateProjectMemberHandler(c *gin.Context) {

@@ -103,7 +103,7 @@ func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID st
 		return nil, nil, nil, nil, nil, nil, err
 	}
 
-	projectMembers, err := s.projectMemberRepo.GetProjectMembersByProjectID(ctx, projectID)
+	projectMembers, err := s.projectMemberRepo.GetProjectMembersByProjectID(ctx, projectID, nil)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, err
 	}
