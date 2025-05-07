@@ -211,12 +211,6 @@ func (h *teamHandler) DeleteTeamHandler(c *gin.Context) {
 		return
 	}
 
-	err = validation.ValidateUUID(projectID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid project ID"))
-		return
-	}
-
 	err = h.teamService.DeleteTeamByID(c.Request.Context(), teamID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete team"))

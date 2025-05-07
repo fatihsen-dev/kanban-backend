@@ -7,7 +7,7 @@ type CreateProjectMemberRequest struct {
 }
 
 type UpdateProjectMemberRequest struct {
-	ID        string `json:"id" validate:"required,uuid4"`
-	Role      string `json:"role" validate:"required,oneof=admin write read"`
-	ProjectID string `json:"project_id" validate:"required,uuid4"`
+	ID     string  `json:"id" validate:"required,uuid4"`
+	Role   *string `json:"role,omitempty" validate:"omitempty,oneof=admin write read"`
+	TeamID *string `json:"team_id,omitempty" validate:"omitempty,uuid4|eq="`
 }

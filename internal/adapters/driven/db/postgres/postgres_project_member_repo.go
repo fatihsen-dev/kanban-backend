@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
@@ -92,10 +94,44 @@ func (r *PostgresProjectMemberRepository) GetByUserID(ctx context.Context, userI
 }
 
 func (r *PostgresProjectMemberRepository) UpdateProjectMember(ctx context.Context, projectMember *domain.ProjectMember) error {
-	query := `UPDATE project_members SET role = $1 WHERE id = $2`
-	_, err := r.DB.ExecContext(ctx, query, projectMember.Role, projectMember.ID)
-	if err != nil {
-		return err
+	queryBase := "UPDATE project_members SET "
+	queryWhere := " WHERE id = $%d"
+
+	setClauses := []string{}
+	args := []interface{}{}
+	paramIndex := 1
+
+	if projectMember.Role != "" {
+		setClauses = append(setClauses, fmt.Sprintf("role = $%d", paramIndex))
+		args = append(args, projectMember.Role)
+		paramIndex++
 	}
+
+	if projectMember.TeamID != nil {
+		teamID := *projectMember.TeamID
+		if teamID == "" {
+			setClauses = append(setClauses, "team_id = NULL")
+		} else {
+			setClauses = append(setClauses, fmt.Sprintf("team_id = $%d", paramIndex))
+			args = append(args, teamID)
+			paramIndex++
+		}
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	querySet := strings.Join(setClauses, ", ")
+
+	args = append(args, projectMember.ID)
+
+	finalQuery := queryBase + querySet + fmt.Sprintf(queryWhere, paramIndex)
+
+	_, err := r.DB.ExecContext(ctx, finalQuery, args...)
+	if err != nil {
+		return fmt.Errorf("project member update failed: %w", err)
+	}
+
 	return nil
 }

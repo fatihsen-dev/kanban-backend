@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/requests"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers/responses"
 	middlewares "github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/middleware"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/ws"
@@ -44,18 +45,31 @@ func (h *projectMemberHandler) UpdateProjectMemberHandler(c *gin.Context) {
 	}
 
 	requestData.ID = memberID
-	requestData.ProjectID = projectID
 
 	if err := validation.Validate(requestData); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return
 	}
 
-	err := h.projectMemberService.UpdateProjectMember(c.Request.Context(), &domain.ProjectMember{
-		ID:        memberID,
-		ProjectID: projectID,
-		Role:      domain.AccessRole(requestData.Role),
-	})
+	member := &domain.ProjectMember{
+		ID: memberID,
+	}
+
+	response := responses.UpdateProjectMemberResponse{
+		ID: memberID,
+	}
+
+	if requestData.Role != nil {
+		member.Role = domain.AccessRole(*requestData.Role)
+		response.Role = requestData.Role
+	}
+
+	if requestData.TeamID != nil {
+		member.TeamID = requestData.TeamID
+		response.TeamID = requestData.TeamID
+	}
+
+	err := h.projectMemberService.UpdateProjectMember(c.Request.Context(), member)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError(err.Error()))
 		return
@@ -63,13 +77,10 @@ func (h *projectMemberHandler) UpdateProjectMemberHandler(c *gin.Context) {
 
 	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
 		Name: "project_member_updated",
-		Data: map[string]interface{}{
-			"id":   memberID,
-			"role": requestData.Role,
-		},
+		Data: response,
 	})
 
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project member updated successfully", nil))
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project member updated successfully", response))
 }
 
 func (h *projectMemberHandler) GetOnlineProjectMembersHandler(c *gin.Context) {

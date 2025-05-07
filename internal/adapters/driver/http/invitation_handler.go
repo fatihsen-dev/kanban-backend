@@ -34,12 +34,12 @@ func (h *invitationHandler) RegisterInvitationRouter(r *gin.Engine) {
 
 	invitationGroup.GET("", h.GetInvitationsHandler)
 	invitationGroup.PUT("/:invitation_id", h.UpdateInvitationStatusHandler)
-	invitationGroup.POST("", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.CreateInvitationHandler)
+	invitationGroup.POST("/:project_id", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.CreateInvitationHandler)
 }
 
 func (h *invitationHandler) CreateInvitationHandler(c *gin.Context) {
 	user := c.MustGet("user").(*jwt.UserClaims)
-
+	projectID := c.Param("project_id")
 	var request requests.InvitationCreateRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
@@ -47,7 +47,7 @@ func (h *invitationHandler) CreateInvitationHandler(c *gin.Context) {
 	}
 
 	request.InviterID = user.ID
-
+	request.ProjectID = projectID
 	if err := validation.Validate(request); err != nil {
 		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
 		return

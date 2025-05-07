@@ -23,6 +23,12 @@ type DeleteProjectMemberResponse struct {
 	ID string `json:"id"`
 }
 
+type UpdateProjectMemberResponse struct {
+	ID     string  `json:"id"`
+	Role   *string `json:"role,omitempty"`
+	TeamID *string `json:"team_id,omitempty"`
+}
+
 type OnlineProjectMembersResponse struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
