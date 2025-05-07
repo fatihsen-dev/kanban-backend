@@ -61,12 +61,12 @@ func (h *projectMemberHandler) UpdateProjectMemberHandler(c *gin.Context) {
 
 	if requestData.Role != nil {
 		member.Role = domain.AccessRole(*requestData.Role)
-		response.Role = requestData.Role
+		response.Role = *requestData.Role
 	}
 
 	if requestData.TeamID != nil {
 		member.TeamID = requestData.TeamID
-		response.TeamID = requestData.TeamID
+		response.TeamID = *requestData.TeamID
 	}
 
 	err := h.projectMemberService.UpdateProjectMember(c.Request.Context(), member)
