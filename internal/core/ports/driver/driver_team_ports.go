@@ -12,4 +12,5 @@ type TeamService interface {
 	UpdateTeam(ctx context.Context, team *domain.Team) error
 	DeleteTeamByID(ctx context.Context, id string) error
 	GetTeamByID(ctx context.Context, id string) (*domain.Team, error)
+	AddTeamMembers(ctx context.Context, teamID string, memberIDs []string) ([]string, error)
 }

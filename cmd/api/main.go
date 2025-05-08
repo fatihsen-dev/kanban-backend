@@ -49,7 +49,7 @@ func main() {
 	columnService := service.NewColumnService(columnRepo, taskRepo)
 	taskService := service.NewTaskService(taskRepo)
 	projectMemberService := service.NewProjectMemberService(projectMemberRepo, userRepo)
-	teamService := service.NewTeamService(teamRepo)
+	teamService := service.NewTeamService(teamRepo, projectMemberRepo)
 	invitationService := service.NewInvitationService(invitationRepo, userRepo, projectRepo, projectMemberRepo)
 
 	hub := ws.NewHub(projectMemberService)

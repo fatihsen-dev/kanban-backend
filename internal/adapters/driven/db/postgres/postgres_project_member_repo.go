@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driven"
@@ -32,9 +34,28 @@ func (r *PostgresProjectMemberRepository) Save(ctx context.Context, projectMembe
 	return nil
 }
 
-func (r *PostgresProjectMemberRepository) GetProjectMembersByProjectID(ctx context.Context, projectID string) ([]*domain.ProjectMember, error) {
-	query := `SELECT id, team_id, user_id, project_id, role, created_at FROM project_members WHERE project_id = $1`
-	rows, err := r.DB.QueryContext(ctx, query, projectID)
+func (r *PostgresProjectMemberRepository) GetProjectMembersByProjectID(ctx context.Context, projectID string, searchQuery *string) ([]*domain.ProjectMember, error) {
+	var query string
+	var args []interface{}
+
+	if searchQuery != nil && *searchQuery != "" {
+		query = `
+			SELECT DISTINCT pm.id, pm.team_id, pm.user_id, pm.project_id, pm.role, pm.created_at 
+			FROM project_members pm
+			INNER JOIN users u ON pm.user_id = u.id
+			WHERE pm.project_id = $1 
+			AND (
+				LOWER(u.email) LIKE LOWER($2)
+			)`
+		args = []interface{}{projectID, "%" + *searchQuery + "%"}
+	} else {
+		query = `SELECT id, team_id, user_id, project_id, role, created_at 
+				FROM project_members 
+				WHERE project_id = $1`
+		args = []interface{}{projectID}
+	}
+
+	rows, err := r.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,10 +113,44 @@ func (r *PostgresProjectMemberRepository) GetByUserID(ctx context.Context, userI
 }
 
 func (r *PostgresProjectMemberRepository) UpdateProjectMember(ctx context.Context, projectMember *domain.ProjectMember) error {
-	query := `UPDATE project_members SET role = $1 WHERE id = $2`
-	_, err := r.DB.ExecContext(ctx, query, projectMember.Role, projectMember.ID)
-	if err != nil {
-		return err
+	queryBase := "UPDATE project_members SET "
+	queryWhere := " WHERE id = $%d"
+
+	setClauses := []string{}
+	args := []interface{}{}
+	paramIndex := 1
+
+	if projectMember.Role != "" {
+		setClauses = append(setClauses, fmt.Sprintf("role = $%d", paramIndex))
+		args = append(args, projectMember.Role)
+		paramIndex++
 	}
+
+	if projectMember.TeamID != nil {
+		teamID := *projectMember.TeamID
+		if teamID == "" {
+			setClauses = append(setClauses, "team_id = NULL")
+		} else {
+			setClauses = append(setClauses, fmt.Sprintf("team_id = $%d", paramIndex))
+			args = append(args, teamID)
+			paramIndex++
+		}
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	querySet := strings.Join(setClauses, ", ")
+
+	args = append(args, projectMember.ID)
+
+	finalQuery := queryBase + querySet + fmt.Sprintf(queryWhere, paramIndex)
+
+	_, err := r.DB.ExecContext(ctx, finalQuery, args...)
+	if err != nil {
+		return fmt.Errorf("project member update failed: %w", err)
+	}
+
 	return nil
 }

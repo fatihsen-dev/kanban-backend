@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/http/datatransfers"
+	"github.com/fatihsen-dev/kanban-backend/internal/adapters/driver/validation"
 	"github.com/fatihsen-dev/kanban-backend/internal/core/domain"
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
@@ -35,6 +36,12 @@ func (m *ProjectAuthzMiddleware) Handle(memberType MemberType) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		user := ctx.MustGet("user").(*jwt.UserClaims)
 		projectID := ctx.Param("project_id")
+
+		err := validation.ValidateUUID(projectID)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, datatransfers.ResponseAbort("Invalid project ID"))
+			return
+		}
 
 		projectMember, err := CheckAccess(user.ID, projectID, ctx.Request.Context(), m.projectMemberService)
 		if err != nil {

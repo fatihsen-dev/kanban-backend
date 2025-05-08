@@ -18,8 +18,8 @@ func NewPostgresTeamRepo(baseRepo *PostgresRepository) ports.TeamRepository {
 }
 
 func (r *PostgresTeamRepository) Save(ctx context.Context, team *domain.Team) error {
-	query := `INSERT INTO teams (name, role, project_id) VALUES ($1, $2, $3)`
-	_, err := r.DB.ExecContext(ctx, query, team.Name, team.Role, team.ProjectID)
+	query := `INSERT INTO teams (name, role, project_id) VALUES ($1, $2, $3) RETURNING id, created_at`
+	err := r.DB.QueryRowContext(ctx, query, team.Name, team.Role, team.ProjectID).Scan(&team.ID, &team.CreatedAt)
 	if err != nil {
 		return err
 	}

@@ -28,7 +28,7 @@ func (r *PostgresInvitationRepository) SaveInvitations(ctx context.Context, invi
 			continue
 		}
 
-		checkQuery := `SELECT COUNT(*) FROM invitations WHERE invitee_id = $1 AND project_id = $2 AND status = 'pending'`
+		checkQuery := `SELECT COUNT(*) FROM invitations WHERE invitee_id = $1 AND project_id = $2 AND status != 'rejected'`
 		var count int
 		err := tx.QueryRowContext(ctx, checkQuery, invitation.InviteeID, invitation.ProjectID).Scan(&count)
 		if err != nil {
