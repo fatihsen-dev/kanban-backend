@@ -10,6 +10,7 @@ import (
 	ports "github.com/fatihsen-dev/kanban-backend/internal/core/ports/driver"
 	"github.com/fatihsen-dev/kanban-backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type MemberType string
@@ -52,10 +53,10 @@ func (m *ProjectAuthzMiddleware) Handle(memberType MemberType) gin.HandlerFunc {
 		ctx.Set("project_member", projectMember)
 
 		if !CheckRole(projectMember.Role, memberType, ctx) {
-
 			if projectMember.TeamID != nil {
 				team, err := m.teamService.GetTeamByID(ctx.Request.Context(), *projectMember.TeamID)
 				if err != nil {
+					zap.L().Error("failed to get team by id", zap.Error(err))
 					ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
 					return
 				}
@@ -66,6 +67,8 @@ func (m *ProjectAuthzMiddleware) Handle(memberType MemberType) gin.HandlerFunc {
 					ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
 					return
 				}
+				ctx.Next()
+				return
 			}
 
 			ctx.AbortWithStatusJSON(http.StatusForbidden, datatransfers.ResponseAbort("You are not authorized to access this project"))
@@ -87,7 +90,6 @@ func CheckAccess(userID string, projectID string, ctx context.Context, projectMe
 }
 
 func CheckRole(role domain.AccessRole, memberType MemberType, ctx *gin.Context) bool {
-
 	switch {
 	case role == domain.AccessOwnerRole:
 		return true
