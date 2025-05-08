@@ -10,3 +10,7 @@ type UpdateTeamRequest struct {
 	Role *string `json:"role,omitempty" validate:"omitempty,oneof=admin write read"`
 	Name *string `json:"name,omitempty" validate:"omitempty,min=3,max=26"`
 }
+
+type AddTeamMemberRequest struct {
+	MemberIDs []string `json:"member_ids" validate:"required,dive,uuid4"`
+}

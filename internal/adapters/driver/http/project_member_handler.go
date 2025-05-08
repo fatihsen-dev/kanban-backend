@@ -112,7 +112,7 @@ func (h *projectMemberHandler) UpdateProjectMemberHandler(c *gin.Context) {
 	}
 
 	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
-		Name: "project_member_updated",
+		Name: ws.EventNameProjectMemberUpdated,
 		Data: response,
 	})
 

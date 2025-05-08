@@ -38,6 +38,7 @@ func (h *teamHandler) RegisterTeamRouter(r *gin.Engine) {
 	teamGroup.GET("/:team_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTeamHandler)
 	teamGroup.PUT("/:team_id", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.UpdateTeamHandler)
 	teamGroup.DELETE("/:team_id", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.DeleteTeamHandler)
+	teamGroup.PUT("/:team_id/members", h.projectAuthzMiddleware.Handle(middlewares.Owner), h.AddTeamMemberHandler)
 }
 
 func (h *teamHandler) CreateTeamHandler(c *gin.Context) {
@@ -227,4 +228,44 @@ func (h *teamHandler) DeleteTeamHandler(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Team deleted successfully", responseData))
+}
+
+func (h *teamHandler) AddTeamMemberHandler(c *gin.Context) {
+	teamID := c.Param("team_id")
+	projectID := c.Param("project_id")
+
+	err := validation.ValidateUUID(teamID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError("Invalid team ID"))
+		return
+	}
+
+	var requestData requests.AddTeamMemberRequest
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
+	if err := validation.Validate(requestData); err != nil {
+		c.JSON(http.StatusBadRequest, datatransfers.ResponseError(err.Error()))
+		return
+	}
+
+	updatedMemberIDs, err := h.teamService.AddTeamMembers(c.Request.Context(), teamID, requestData.MemberIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to add team members"))
+		return
+	}
+
+	responseData := responses.AddTeamMemberResponse{
+		TeamID:    teamID,
+		MemberIDs: updatedMemberIDs,
+	}
+
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameTeamMembersAdded,
+		Data: responseData,
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Team members added successfully", responseData))
 }

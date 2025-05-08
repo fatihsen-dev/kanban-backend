@@ -27,3 +27,8 @@ type TeamWithMembersResponse struct {
 	CreatedAt string                  `json:"created_at"`
 	Members   []ProjectMemberResponse `json:"members"`
 }
+
+type AddTeamMemberResponse struct {
+	TeamID    string   `json:"team_id"`
+	MemberIDs []string `json:"member_ids"`
+}
