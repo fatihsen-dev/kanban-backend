@@ -37,7 +37,7 @@ func (h *taskHandler) RegisterTaskRouter(r *gin.Engine) {
 	taskGroup.GET("", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTasksHandler)
 	taskGroup.GET("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.GetTaskHandler)
 	taskGroup.PUT("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.UpdateTaskHandler)
-	taskGroup.DELETE("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Admin), h.DeleteTaskHandler)
+	taskGroup.DELETE("/:task_id", h.projectAuthzMiddleware.Handle(middlewares.Member), h.DeleteTaskHandler)
 }
 
 func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
