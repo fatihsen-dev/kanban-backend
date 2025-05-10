@@ -48,6 +48,7 @@ func Migrate(db *sql.DB) {
 	query = `CREATE TABLE IF NOT EXISTS tasks (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		title VARCHAR(255) NOT NULL,
+		content TEXT DEFAULT NULL,
 		column_id UUID NOT NULL,
 		project_id UUID NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -19,8 +19,30 @@ func NewPostgresTaskRepo(baseRepo *PostgresRepository) ports.TaskRepository {
 }
 
 func (r *PostgresTaskRepository) Save(ctx context.Context, task *domain.Task) error {
-	query := `INSERT INTO tasks (title, column_id, project_id) VALUES ($1, $2, $3) RETURNING id, title, column_id, project_id, created_at`
-	err := r.DB.QueryRowContext(ctx, query, task.Title, task.ColumnID, task.ProjectID).Scan(&task.ID, &task.Title, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
+	queryBase := `INSERT INTO tasks (title, column_id, project_id`
+	valuesBase := `VALUES ($1, $2, $3`
+	returningBase := `RETURNING id, title, content, column_id, project_id`
+	args := []interface{}{task.Title, task.ColumnID, task.ProjectID}
+	paramIndex := 4
+
+	if task.Content != nil {
+		queryBase += `, content`
+		valuesBase += fmt.Sprintf(`, $%d`, paramIndex)
+		returningBase += `, content`
+		args = append(args, *task.Content)
+		paramIndex++
+	}
+
+	queryBase += `) `
+	valuesBase += `) `
+	returningBase += `, created_at`
+
+	query := queryBase + valuesBase + returningBase
+
+	scanArgs := []interface{}{&task.ID, &task.Title, &task.Content, &task.ColumnID, &task.ProjectID}
+	scanArgs = append(scanArgs, &task.CreatedAt)
+
+	err := r.DB.QueryRowContext(ctx, query, args...).Scan(scanArgs...)
 	if err != nil {
 		return err
 	}
@@ -28,9 +50,9 @@ func (r *PostgresTaskRepository) Save(ctx context.Context, task *domain.Task) er
 }
 
 func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE id = $1`
+	query := `SELECT id, title, content, column_id, project_id, created_at FROM tasks WHERE id = $1`
 	var task domain.Task
-	err := r.DB.QueryRowContext(ctx, query, id).Scan(&task.ID, &task.Title, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(&task.ID, &task.Title, &task.Content, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +60,7 @@ func (r *PostgresTaskRepository) GetByID(ctx context.Context, id string) (*domai
 }
 
 func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, columnIDs []string) ([]*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1) ORDER BY created_at ASC`
+	query := `SELECT id, title, content, column_id, project_id, created_at FROM tasks WHERE column_id = ANY($1) ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query, pq.Array(columnIDs))
 	if err != nil {
 		return nil, err
@@ -48,7 +70,7 @@ func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, column
 	var tasks []*domain.Task
 	for rows.Next() {
 		var task domain.Task
-		err := rows.Scan(&task.ID, &task.Title, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
+		err := rows.Scan(&task.ID, &task.Title, &task.Content, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -58,7 +80,7 @@ func (r *PostgresTaskRepository) GetTasksByColumnIDs(ctx context.Context, column
 }
 
 func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, error) {
-	query := `SELECT id, title, column_id, project_id, created_at FROM tasks ORDER BY created_at ASC`
+	query := `SELECT id, title, content, column_id, project_id, created_at FROM tasks ORDER BY created_at ASC`
 	rows, err := r.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -68,7 +90,7 @@ func (r *PostgresTaskRepository) GetAll(ctx context.Context) ([]*domain.Task, er
 	var tasks []*domain.Task
 	for rows.Next() {
 		var task domain.Task
-		err := rows.Scan(&task.ID, &task.Title, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
+		err := rows.Scan(&task.ID, &task.Title, &task.Content, &task.ColumnID, &task.ProjectID, &task.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -88,6 +110,12 @@ func (r *PostgresTaskRepository) Update(ctx context.Context, task *domain.Task) 
 	if task.Title != "" {
 		setClauses = append(setClauses, fmt.Sprintf("title = $%d", paramIndex))
 		args = append(args, task.Title)
+		paramIndex++
+	}
+
+	if task.Content != nil {
+		setClauses = append(setClauses, fmt.Sprintf("content = $%d", paramIndex))
+		args = append(args, task.Content)
 		paramIndex++
 	}
 
