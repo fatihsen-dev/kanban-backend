@@ -194,26 +194,30 @@ func (s *InvitationService) UpdateInvitationStatus(ctx context.Context, request 
 		return nil, nil, errors.New("this invitation has already been accepted or rejected")
 	}
 
-	projectMember := &domain.ProjectMember{
-		UserID:    request.UserID,
-		ProjectID: invitation.ProjectID,
-		Role:      domain.AccessReadRole,
-	}
-
-	err = s.projectMemberRepo.Save(ctx, projectMember)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	user, err := s.userRepo.GetByID(ctx, request.UserID)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	err = s.invitationRepo.UpdateStatus(ctx, request.ID, request.Status)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return projectMember, user, nil
+	if request.Status == string(domain.InvitationStatusAccepted) {
+		projectMember := &domain.ProjectMember{
+			UserID:    request.UserID,
+			ProjectID: invitation.ProjectID,
+			Role:      domain.AccessReadRole,
+		}
+
+		err = s.projectMemberRepo.Save(ctx, projectMember)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		user, err := s.userRepo.GetByID(ctx, request.UserID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return projectMember, user, nil
+	}
+
+	return nil, nil, nil
 }
