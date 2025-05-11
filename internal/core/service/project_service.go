@@ -145,3 +145,7 @@ func (s *ProjectService) GetProjectWithDetails(ctx context.Context, projectID st
 
 	return project, columns, tasksByColumn, teams, projectMembers, users, nil
 }
+
+func (s *ProjectService) DeleteProject(ctx context.Context, id string) error {
+	return s.projectRepo.DeleteByID(ctx, id)
+}

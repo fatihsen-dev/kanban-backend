@@ -39,6 +39,10 @@ func (h *projectHandler) RegisterProjectRouter(r *gin.Engine) {
 		h.projectAuthzMiddleware.Handle(middlewares.Member),
 		h.GetProjectHandler,
 	)
+	projectGroup.DELETE("/:project_id",
+		h.projectAuthzMiddleware.Handle(middlewares.Owner),
+		h.DeleteProjectHandler,
+	)
 }
 
 func (h *projectHandler) CreateProjectHandler(c *gin.Context) {
@@ -185,9 +189,29 @@ func (h *projectHandler) GetProjectsHandler(c *gin.Context) {
 		projectResponses[i] = responses.ProjectResponse{
 			ID:        project.ID,
 			Name:      project.Name,
+			OwnerID:   project.OwnerID,
 			CreatedAt: project.CreatedAt.Format(time.RFC3339),
 		}
 	}
 
 	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Projects fetched successfully", projectResponses))
+}
+
+func (h *projectHandler) DeleteProjectHandler(c *gin.Context) {
+	projectID := c.Param("project_id")
+
+	err := h.projectService.DeleteProject(c.Request.Context(), projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, datatransfers.ResponseError("Failed to delete project"))
+		return
+	}
+
+	h.hub.SendMessageToProject(projectID, ws.BaseResponse{
+		Name: ws.EventNameProjectDeleted,
+		Data: map[string]interface{}{
+			"id": projectID,
+		},
+	})
+
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Project deleted successfully", nil))
 }

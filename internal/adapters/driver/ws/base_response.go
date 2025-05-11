@@ -18,6 +18,7 @@ const (
 	EventNameUserStatusUpdated    EventName = "user.status.updated"
 	EventNameTeamMembersAdded     EventName = "team.members.added"
 	EventNameProjectMemberUpdated EventName = "project.member.updated"
+	EventNameProjectDeleted       EventName = "project.deleted"
 )
 
 type BaseResponse struct {

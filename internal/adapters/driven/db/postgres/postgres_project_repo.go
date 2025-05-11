@@ -76,3 +76,12 @@ func (r *PostgresProjectRepository) GetByIDs(ctx context.Context, ids []string) 
 	}
 	return projects, nil
 }
+
+func (r *PostgresProjectRepository) DeleteByID(ctx context.Context, id string) error {
+	query := `DELETE FROM projects WHERE id = $1`
+	_, err := r.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
