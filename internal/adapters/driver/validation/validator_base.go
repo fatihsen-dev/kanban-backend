@@ -24,6 +24,7 @@ func (ve ValidationErrors) Error() string {
 
 func Validate(data interface{}) error {
 	validate := validator.New()
+	validate.RegisterValidation("notblank", ValidateNotBlank)
 	err := validate.Struct(data)
 	if err != nil {
 		var validationErrors ValidationErrors
@@ -68,6 +69,8 @@ func getErrorMessage(err validator.FieldError) string {
 		return "Must be a valid JSON"
 	case "containsany":
 		return "is invalid"
+	case "notblank":
+		return "This field cannot be empty"
 	default:
 		return fmt.Sprintf("Failed %s validation", err.Tag())
 	}
