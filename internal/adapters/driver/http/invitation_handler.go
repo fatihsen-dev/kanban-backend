@@ -117,26 +117,31 @@ func (h *invitationHandler) UpdateInvitationStatusHandler(c *gin.Context) {
 		return
 	}
 
-	responseData := responses.ProjectMemberWithUserResponse{
-		ID:        projectMember.ID,
-		UserID:    projectMember.UserID,
-		Role:      string(projectMember.Role),
-		TeamID:    projectMember.TeamID,
-		ProjectID: projectMember.ProjectID,
-		CreatedAt: projectMember.CreatedAt.Format(time.RFC3339),
-		User: responses.UserResponse{
-			ID:        user.ID,
-			Name:      user.Name,
-			Email:     user.Email,
-			IsAdmin:   user.IsAdmin,
-			CreatedAt: user.CreatedAt.Format(time.RFC3339),
-		},
+	if projectMember != nil {
+		responseData := responses.ProjectMemberWithUserResponse{
+			ID:        projectMember.ID,
+			UserID:    projectMember.UserID,
+			Role:      string(projectMember.Role),
+			TeamID:    projectMember.TeamID,
+			ProjectID: projectMember.ProjectID,
+			CreatedAt: projectMember.CreatedAt.Format(time.RFC3339),
+			User: responses.UserResponse{
+				ID:        user.ID,
+				Name:      user.Name,
+				Email:     user.Email,
+				IsAdmin:   user.IsAdmin,
+				CreatedAt: user.CreatedAt.Format(time.RFC3339),
+			},
+		}
+
+		h.hub.SendMessageToProject(projectMember.ProjectID, ws.BaseResponse{
+			Name: ws.EventNameProjectMemberCreated,
+			Data: responseData,
+		})
+
+		c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Invitation accepted successfully", responseData))
+		return
 	}
 
-	h.hub.SendMessageToProject(projectMember.ProjectID, ws.BaseResponse{
-		Name: ws.EventNameProjectMemberCreated,
-		Data: responseData,
-	})
-
-	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Invitation accepted successfully", responseData))
+	c.JSON(http.StatusOK, datatransfers.ResponseSuccess("Invitation rejected successfully", nil))
 }
