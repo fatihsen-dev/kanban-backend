@@ -59,6 +59,7 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 
 	task := &domain.Task{
 		Title:     requestData.Title,
+		Content:   requestData.Content,
 		ProjectID: requestData.ProjectID,
 		ColumnID:  requestData.ColumnID,
 	}
@@ -71,24 +72,19 @@ func (h *taskHandler) CreateTaskHandler(c *gin.Context) {
 		return
 	}
 
-	h.hub.SendMessageToProject(task.ProjectID, ws.BaseResponse{
-		Name: ws.EventNameTaskCreated,
-		Data: responses.TaskResponse{
-			ID:        task.ID,
-			Title:     task.Title,
-			ProjectID: task.ProjectID,
-			ColumnID:  task.ColumnID,
-			CreatedAt: task.CreatedAt.Format(time.RFC3339),
-		},
-	})
-
 	responseData := responses.TaskResponse{
 		ID:        task.ID,
 		Title:     task.Title,
+		Content:   task.Content,
 		ProjectID: task.ProjectID,
 		ColumnID:  task.ColumnID,
 		CreatedAt: task.CreatedAt.Format(time.RFC3339),
 	}
+
+	h.hub.SendMessageToProject(task.ProjectID, ws.BaseResponse{
+		Name: ws.EventNameTaskCreated,
+		Data: responseData,
+	})
 
 	c.JSON(http.StatusCreated, datatransfers.ResponseSuccess("Task created successfully", responseData))
 }
@@ -111,6 +107,7 @@ func (h *taskHandler) GetTaskHandler(c *gin.Context) {
 	responseData := responses.TaskResponse{
 		ID:        task.ID,
 		Title:     task.Title,
+		Content:   task.Content,
 		ProjectID: task.ProjectID,
 		ColumnID:  task.ColumnID,
 		CreatedAt: task.CreatedAt.Format(time.RFC3339),
@@ -131,6 +128,7 @@ func (h *taskHandler) GetTasksHandler(c *gin.Context) {
 		responseData[i] = responses.TaskResponse{
 			ID:        task.ID,
 			Title:     task.Title,
+			Content:   task.Content,
 			ProjectID: task.ProjectID,
 			ColumnID:  task.ColumnID,
 			CreatedAt: task.CreatedAt.Format(time.RFC3339),
@@ -183,6 +181,11 @@ func (h *taskHandler) UpdateTaskHandler(c *gin.Context) {
 	if requestData.ColumnID != nil {
 		task.ColumnID = *requestData.ColumnID
 		responseData.ColumnID = task.ColumnID
+	}
+
+	if requestData.Content != nil {
+		task.Content = requestData.Content
+		responseData.Content = task.Content
 	}
 
 	err = h.taskService.UpdateTask(c.Request.Context(), task)

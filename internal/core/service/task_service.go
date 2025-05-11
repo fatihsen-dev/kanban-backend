@@ -16,11 +16,7 @@ func NewTaskService(taskRepo ports.TaskRepository) *TaskService {
 }
 
 func (s *TaskService) CreateTask(ctx context.Context, task *domain.Task) error {
-	err := s.taskRepo.Save(ctx, task)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.taskRepo.Save(ctx, task)
 }
 
 func (s *TaskService) GetTaskByID(ctx context.Context, id string) (*domain.Task, error) {

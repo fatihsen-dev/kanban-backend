@@ -143,6 +143,7 @@ func (h *projectHandler) GetProjectHandler(c *gin.Context) {
 			taskResponses[j] = responses.TaskResponse{
 				ID:        task.ID,
 				Title:     task.Title,
+				Content:   task.Content,
 				ProjectID: task.ProjectID,
 				ColumnID:  task.ColumnID,
 				CreatedAt: task.CreatedAt.Format(time.RFC3339),
