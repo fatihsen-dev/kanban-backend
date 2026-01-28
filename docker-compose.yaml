@@ -11,7 +11,7 @@ services:
          - postgres
       restart: unless-stopped
       volumes:
-         - ./config/config.docker.yaml:/app/config/config.yaml
+         - ./config/config.docker.yaml:/app/config/config.yaml:ro
 
    postgres:
       image: postgres:16-alpine

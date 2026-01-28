@@ -25,8 +25,8 @@ func main() {
 	appConfig := config.Read()
 	defer zap.L().Sync()
 
-	router := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{appConfig.ClientUrl},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
