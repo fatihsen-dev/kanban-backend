@@ -7,28 +7,25 @@ import (
 )
 
 type AppConfig struct {
-	Port      string `mapstructure:"port" yaml:"port"`
-	DBUrl     string `mapstructure:"db_url" yaml:"db_url"`
-	JWTSecret string `mapstructure:"jwt_secret" yaml:"jwt_secret"`
-	ClientUrl string `mapstructure:"client_url" yaml:"client_url"`
+	Port      string `mapstructure:"PORT"`
+	DBUrl     string `mapstructure:"DB_URL"`
+	JWTSecret string `mapstructure:"JWT_SECRET"`
+	ClientUrl string `mapstructure:"CLIENT_URL"`
 }
 
 func Read() *AppConfig {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("$PWD/config")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("/config")
-	viper.AddConfigPath("./config")
+	viper.AutomaticEnv()
+	viper.SetConfigFile(".env")
+	viper.AddConfigPath("$PWD")
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %w", err))
+		panic(fmt.Errorf("Error reading config: %w", err))
 	}
 
 	var appConfig AppConfig
 	err = viper.Unmarshal(&appConfig)
 	if err != nil {
-		panic(fmt.Errorf("fatal error unmarshalling config: %w", err))
+		panic(fmt.Errorf("Error unmarshalling config: %w", err))
 	}
 
 	return &appConfig
