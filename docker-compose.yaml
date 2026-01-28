@@ -3,8 +3,6 @@ services:
       build:
          context: .
          dockerfile: Dockerfile
-      ports:
-         - "5000:5000"
       environment:
          - GIN_MODE=release
       depends_on:
