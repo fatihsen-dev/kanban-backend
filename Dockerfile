@@ -17,7 +17,5 @@ WORKDIR /app
 
 COPY --from=builder /app/api .
 
-RUN mkdir -p /app/config
-
 EXPOSE 5000
 CMD ["./api"]
