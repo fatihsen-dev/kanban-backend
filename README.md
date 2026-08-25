@@ -1,3 +1,5 @@
+
+
 # Kanban Backend
 
 A robust, scalable Go-based backend for a modern Kanban board application, designed with Hexagonal (Ports & Adapters) Architecture for clean separation of concerns and high maintainability.
@@ -75,7 +77,7 @@ This structure ensures the core logic is isolated from frameworks and infrastruc
    go mod download
    ```
 4. Set up PostgreSQL locally (or use Docker)
-5. Update `config/config.yaml` if needed
+5. Update `.env` if needed
 6. Run with Air (hot reloading):
    ```
    air
